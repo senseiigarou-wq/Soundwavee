@@ -28,10 +28,7 @@
 /* ─── Reset ────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body, #root { height: 100%; overflow: hidden; }
-/* Login page needs scrolling — override the global lock */
-body.sw-login-page { overflow-y: auto !important; height: auto !important; min-height: 100% !important; }
-body.sw-login-page #root { overflow: visible !important; height: auto !important; min-height: 100% !important; }
-body.sw-login-page .sw-page { min-height: 100vh; overflow: visible !important; }
+/* Login page scroll is handled by .sw-page itself (see LoginPage.tsx) */
 body {
   background: var(--bg);
   color: var(--text);
