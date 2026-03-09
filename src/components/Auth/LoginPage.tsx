@@ -157,13 +157,16 @@ const KF = `
 
 /* ─── Base (mobile-first) ─────────────────────────────────── */
 .sw-page {
-  min-height: 100svh;
+  /* Own scroll container — does NOT rely on body scrolling.
+     This bypasses the global html/body/root overflow:hidden. */
+  height: 100dvh;          /* dvh = dynamic viewport height (excludes browser chrome) */
   width: 100%;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: scroll;      /* scroll not auto — forces scrollability on Android */
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   position: relative;
 }
 .sw-left {
@@ -206,11 +209,7 @@ export function LoginPage() {
   const { loginGoogle, loginEmail, registerEmail, sendPasswordReset, isLoading, error, clearError } = useAuthStore();
   const { showToast } = useToast();
 
-  // Allow body to scroll while login page is shown, restore on unmount
-  useEffect(() => {
-    document.body.classList.add('sw-login-page');
-    return () => document.body.classList.remove('sw-login-page');
-  }, []);
+  // (scroll handled by .sw-page container — no body class needed)
 
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
@@ -317,19 +316,19 @@ export function LoginPage() {
           <div style={S.hero} className="sw-hero">
             <div style={S.badge}><div style={S.badgeDot}/> Now streaming millions of tracks</div>
             <h1 style={S.h1}>Your music,<br/><span style={S.accent}>everywhere.</span></h1>
-            <p style={S.sub}>Discover trending songs, build playlists, and enjoy music powered by YouTube all in one beautiful interface.</p>
+            <p style={S.sub}>Discover trending songs, build playlists, and enjoy music powered by YouTube — all in one beautiful interface.</p>
             <div style={S.statsRow} className="sw-stats">
               {[['∞','Songs'],['100%','Free'],['HD','Quality']].map(([n,l]) => (
                 <div key={l}><span style={S.statN}>{n}</span><span style={S.statL}>{l}</span></div>
               ))}
             </div>
             <div style={S.pills}>
-            {['📈 Trending','💜 Liked Songs','🎧 Playlists','🔀 Smart Shuffle'].map(f => (
+                {['📈 Trending','💜 Liked Songs','🎧 Playlists','🔀 Smart Shuffle'].map(f => (
                 <span key={f} style={S.pill}>{f}</span>
               ))}
             </div>
           </div>
-          <p style={S.footer}>© 2026 Soundwave · Built by Soundwave Team</p>
+          <p style={S.footer}>© 2025 Soundwave · Secured by Firebase</p>
         </div>
 
         <div className="sw-divider" style={S.divider}/>
