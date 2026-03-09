@@ -88,16 +88,16 @@ const C = {
 };
 
 const S: Record<string, React.CSSProperties> = {
-  page:      { background: '#000', display: 'flex', position: 'relative', fontFamily: "'DM Sans',-apple-system,sans-serif" },
+  page:      { background: '#000', fontFamily: "'DM Sans',-apple-system,sans-serif" },
   blob1:     { position: 'absolute', top: -120, left: -120, width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,107,157,.22) 0%,transparent 70%)', filter: 'blur(60px)', pointerEvents: 'none', animation: 'swFloat 8s ease-in-out infinite' },
   blob2:     { position: 'absolute', top: '40%', right: -150, width: 450, height: 450, borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,85,135,.15) 0%,transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none', animation: 'swFloat 10s ease-in-out infinite reverse' },
   grid:      { position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px)', backgroundSize: '64px 64px', pointerEvents: 'none' },
 
-  left:      { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '56px 64px' },
+  left:      { display: 'flex', flexDirection: 'column', justifyContent: 'space-between' },
   logoRow:   { display: 'flex', alignItems: 'center', gap: 12 },
   logoIcon:  { width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   logoName:  { fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px' },
-  hero:      { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 24, paddingTop: 60 },
+  hero:      { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 24 },
   badge:     { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 999, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', color: '#b3b3b3', fontSize: 13, width: 'fit-content' },
   badgeDot:  { width: 8, height: 8, borderRadius: '50%', background: '#FF6B9D', animation: 'swPulse 2s ease-in-out infinite' },
   h1:        { fontSize: 'clamp(42px,4vw,64px)', fontWeight: 800, color: '#fff', lineHeight: 1.1, letterSpacing: '-2px', margin: 0 },
@@ -111,7 +111,7 @@ const S: Record<string, React.CSSProperties> = {
   footer:    { color: '#535353', fontSize: 12 },
   divider:   { width: 1, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,.07),transparent)', margin: '60px 0', flexShrink: 0 },
 
-  right:     { flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 'clamp(24px,4vw,48px) clamp(16px,4vw,48px)', position: 'relative' },
+  right:     { flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', position: 'relative' },
   box:       { width: '100%', maxWidth: 420 },
   card:      { background: C.card, border: `1px solid ${C.border}`, borderRadius: 'clamp(16px,3vw,24px)', padding: 'clamp(24px,4vw,40px) clamp(18px,4vw,36px)', backdropFilter: 'blur(20px)', boxShadow: '0 25px 60px rgba(0,0,0,.6)' },
 
@@ -157,11 +157,14 @@ const KF = `
 
 /* ─── Base (mobile-first) ─────────────────────────────────── */
 .sw-page {
-  min-height: 100vh;
+  min-height: 100svh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
-  flex-direction: column;
   -webkit-overflow-scrolling: touch;
+  position: relative;
 }
 .sw-left {
   width: 100%;
@@ -202,6 +205,12 @@ input:-webkit-autofill{-webkit-box-shadow:0 0 0 30px #1a1a1a inset!important;-we
 export function LoginPage() {
   const { loginGoogle, loginEmail, registerEmail, sendPasswordReset, isLoading, error, clearError } = useAuthStore();
   const { showToast } = useToast();
+
+  // Allow body to scroll while login page is shown, restore on unmount
+  useEffect(() => {
+    document.body.classList.add('sw-login-page');
+    return () => document.body.classList.remove('sw-login-page');
+  }, []);
 
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
@@ -315,7 +324,7 @@ export function LoginPage() {
               ))}
             </div>
             <div style={S.pills}>
-              {['📈 Trending','💜 Liked Songs','🎧 Playlists','🔀 Smart Shuffle'].map(f => (
+            {['📈 Trending','💜 Liked Songs','🎧 Playlists','🔀 Smart Shuffle'].map(f => (
                 <span key={f} style={S.pill}>{f}</span>
               ))}
             </div>
