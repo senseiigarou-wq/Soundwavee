@@ -328,7 +328,7 @@ export function LoginPage() {
               ))}
             </div>
           </div>
-          <p style={S.footer}>© 2025 Soundwave · Secured by Firebase</p>
+          <p style={S.footer}>© 2026 Soundwave · Built by Soundwave Team</p>
         </div>
 
         <div className="sw-divider" style={S.divider}/>
