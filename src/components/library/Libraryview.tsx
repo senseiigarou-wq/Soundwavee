@@ -1,26 +1,36 @@
 import { SoundwaveIcon } from "@/components/common/Soundwavelogo";
 import { useState } from 'react';
-import { Plus, Trash2, Play, Music } from 'lucide-react';
+import { Plus, Trash2, Play, Music, X, ListPlus } from 'lucide-react';
 import { useLibraryStore } from '@/store/libraryStore';
 import { usePlayerStore } from '@/store/playStore';
 import { useYouTubePlayer } from '@/hooks/useYoutubePlayer';
 import { useToast } from '@/components/common/Toast';
 import { SongCard } from '@/components/common/Songcard';
 import { RateLimiter } from '@/services/ratelimiter';
-import type { Song, Playlist } from '@/types';
+import type { Song, Playlist, View } from '@/types';
 
 type Tab = 'playlists' | 'liked' | 'history';
 
-export function LibraryView() {
+export function LibraryView({ onNavigate }: { onNavigate?: (view: View) => void }) {
   const [activeTab, setActiveTab] = useState<Tab>('playlists');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
 
-  const { playlists, likedSongs, recentSongs, createPlaylist, deletePlaylist, removeFromPlaylist } = useLibraryStore();
-  const { currentSong, isPlaying } = usePlayerStore();
+  const { playlists, likedSongs, recentSongs, createPlaylist, deletePlaylist, removeFromPlaylist, removeFromRecent, clearHistory } = useLibraryStore();
+  const { currentSong, isPlaying, setPendingPlaylist } = usePlayerStore();
   const { loadAndPlay } = useYouTubePlayer();
   const { showToast } = useToast();
+
+  // Unified remove helper — '__clear__' sentinel triggers clearHistory
+  const removeFromRecentStore = (youtubeId: string) => {
+    if (youtubeId === '__clear__') {
+      clearHistory();
+      showToast('History cleared', 'success');
+    } else {
+      removeFromRecent(youtubeId);
+    }
+  };
 
   const handleCreate = () => {
     const v = RateLimiter.validatePlaylistName(newName);
@@ -66,19 +76,39 @@ export function LibraryView() {
           <div>
             <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Playlist</p>
             <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 6 }}>{pl.name}</h1>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{pl.songs.length} songs</p>
-            {pl.songs.length > 0 && (
-              <button onClick={() => handlePlaySong(pl.songs[0])}
-                style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 999, background: 'var(--pink)', color: '#fff', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 16px rgba(255,107,157,0.35)', transition: 'all 0.2s' }}
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{pl.songs.length} song{pl.songs.length !== 1 ? 's' : ''}</p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
+              {pl.songs.length > 0 && (
+                <button onClick={() => handlePlaySong(pl.songs[0])}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 999, background: 'var(--pink)', color: '#fff', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 16px rgba(255,107,157,0.35)', transition: 'all 0.2s', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  <Play size={16} fill="white" /> Play All
+                </button>
+              )}
+              <button
+                onClick={() => { setPendingPlaylist({ id: pl.id, name: pl.name }); setSelectedPlaylist(null); onNavigate?.('search'); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 999, background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(255,255,255,0.12)', color: 'var(--text)', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}
+                onMouseEnter={e => { (e.currentTarget).style.background = 'rgba(255,255,255,0.12)'; }}
+                onMouseLeave={e => { (e.currentTarget).style.background = 'rgba(255,255,255,0.07)'; }}
               >
-                <Play size={16} fill="white" /> Play
+                <ListPlus size={16} /> Add Songs
               </button>
-            )}
+            </div>
           </div>
         </div>
 
         {pl.songs.length === 0
-          ? <div className="empty-state"><div className="empty-state-icon"><SoundwaveIcon size={36} color="var(--text-muted)" /></div><div className="empty-state-title">No songs yet</div><div className="empty-state-sub">Search for songs and add them here</div></div>
+          ? <div className="empty-state">
+              <div className="empty-state-icon"><SoundwaveIcon size={36} color="var(--text-muted)" /></div>
+              <div className="empty-state-title">No songs yet</div>
+              <div className="empty-state-sub" style={{ marginBottom: 20 }}>Go to Search, find a song, tap <strong style={{ color: 'var(--pink)' }}>⋮</strong> and choose <strong style={{ color: 'var(--pink)' }}>Add to Playlist</strong></div>
+              <button
+                onClick={() => { setPendingPlaylist({ id: pl.id, name: pl.name }); setSelectedPlaylist(null); onNavigate?.('search'); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 999, background: 'linear-gradient(135deg,#FF6B9D,#E05587)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(255,107,157,0.35)' }}
+              >
+                <ListPlus size={16} /> Find Songs to Add
+              </button>
+            </div>
           : pl.songs.map((song, i) => (
             <div key={song.youtubeId} style={{ position: 'relative' }}
               onMouseEnter={e => { const btn = e.currentTarget.querySelector('.del-btn') as HTMLElement; if (btn) btn.style.opacity = '1'; }}
@@ -185,13 +215,36 @@ export function LibraryView() {
       {activeTab === 'history' && (
         recentSongs.length === 0
           ? <div className="empty-state"><div className="empty-state-icon"><SoundwaveIcon size={36} color="var(--text-muted)" /></div><div className="empty-state-title">Nothing played yet</div><div className="empty-state-sub">Start playing music to build your history</div></div>
-          : recentSongs.map((song, i) => (
-            <SongCard key={`${song.youtubeId}-${i}`} song={song} layout="row" index={i}
-              isActive={currentSong?.youtubeId === song.youtubeId}
-              isPlaying={isPlaying && currentSong?.youtubeId === song.youtubeId}
-              onPlay={handlePlaySong}
-            />
-          ))
+          : <>
+              {/* Clear all header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 4px 12px', marginBottom: 4 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{recentSongs.length} song{recentSongs.length !== 1 ? 's' : ''}</span>
+                <button
+                  onClick={() => { if (confirm('Clear all history?')) removeFromRecentStore('__clear__'); }}
+                  style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, transition: 'all 0.2s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ff6b6b'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,100,100,0.3)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                >
+                  Clear All
+                </button>
+              </div>
+              {recentSongs.map((song, i) => (
+                <div key={`${song.youtubeId}-${i}`} style={{ position: 'relative' }} className="history-row">
+                  <SongCard song={song} layout="row" index={i}
+                    isActive={currentSong?.youtubeId === song.youtubeId}
+                    isPlaying={isPlaying && currentSong?.youtubeId === song.youtubeId}
+                    onPlay={handlePlaySong}
+                  />
+                  <button
+                    onClick={e => { e.stopPropagation(); removeFromRecentStore(song.youtubeId); }}
+                    title="Remove from history"
+                    className="history-remove-btn"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </>
       )}
     </div>
   );
