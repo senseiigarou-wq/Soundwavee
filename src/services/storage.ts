@@ -48,19 +48,12 @@ export const StorageService = {
   saveLikedSongs: (songs: Song[]) => safeSet(KEYS.LIKED, songs),
 
   // ─── Recent Songs ─────────────────────────────────────────
-getRecentSongs: (): Song[] => safeGet<Song[]>(KEYS.RECENT, []),
-
-addToRecent(song: Song) {
-  const recent = this.getRecentSongs().filter(
-    s => s.youtubeId !== song.youtubeId
-  );
-  recent.unshift({ ...song, addedAt: new Date().toISOString() });
-  safeSet(KEYS.RECENT, recent.slice(0, MAX_RECENT));
-},
-
-saveRecentSongs: (songs: Song[]) => {
-  safeSet(KEYS.RECENT, songs.slice(0, MAX_RECENT));
-},
+  getRecentSongs: (): Song[] => safeGet<Song[]>(KEYS.RECENT, []),
+  addToRecent(song: Song) {
+    const recent = this.getRecentSongs().filter(s => s.youtubeId !== song.youtubeId);
+    recent.unshift({ ...song, addedAt: new Date().toISOString() });
+    safeSet(KEYS.RECENT, recent.slice(0, MAX_RECENT));
+  },
 
   // ─── Trending Cache ───────────────────────────────────────
   getCachedTrending(genre: string): Song[] | null {
@@ -83,6 +76,19 @@ saveRecentSongs: (songs: Song[]) => {
   },
   saveTrendingCache(genre: string, songs: Song[], ttl: number) {
     safeSet(KEYS.TRENDING_PREFIX + genre, { data: songs, timestamp: Date.now(), ttl });
+  },
+
+  removeFromRecent(youtubeId: string): void {
+    const updated = this.getRecentSongs().filter(s => s.youtubeId !== youtubeId);
+    safeSet(KEYS.RECENT, updated);
+  },
+
+  clearRecentSongs(): void {
+    safeSet(KEYS.RECENT, []);
+  },
+
+  saveRecentSongs(songs: Song[]): void {
+    safeSet(KEYS.RECENT, songs.slice(0, MAX_RECENT));
   },
 
   // ─── Clear ────────────────────────────────────────────────
