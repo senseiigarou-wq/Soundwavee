@@ -3,7 +3,7 @@
 // Works on: Android Chrome, Samsung Internet, Edge, Desktop Chrome/Edge
 // iOS Safari: shows manual "Add to Home Screen" instructions
 // ============================================================
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Download, Share, Plus } from 'lucide-react';
 import { SoundwaveLogo } from '@/components/common/Soundwavelogo';
 
