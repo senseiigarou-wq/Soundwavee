@@ -1,6 +1,6 @@
 import { SoundwaveIcon } from "@/components/common/Soundwavelogo";
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search as SearchIcon, X, Loader } from 'lucide-react';
+import { Search as SearchIcon, X, Loader, ListPlus } from 'lucide-react';
 import { YouTubeService } from '@/services/youtube';
 import { usePlayerStore } from '@/store/playStore';
 import { useLibraryStore } from '@/store/libraryStore';
@@ -27,7 +27,7 @@ export function SearchView() {
   const [searched, setSearched] = useState(false);
   const debounceRef = useRef<number | null>(null);
 
-  const { currentSong, isPlaying } = usePlayerStore();
+  const { currentSong, isPlaying, pendingPlaylist, setPendingPlaylist, openAddToPlaylist } = usePlayerStore();
   const { likedSongs, addSong } = useLibraryStore();
   const { loadAndPlay } = useYouTubePlayer();
   const { showToast } = useToast();
@@ -67,6 +67,33 @@ export function SearchView() {
 
   return (
     <div>
+      {/* ── Pending playlist banner ── */}
+      {pendingPlaylist && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, padding: '10px 16px', marginBottom: 12,
+          background: 'linear-gradient(135deg, rgba(255,107,157,0.15), rgba(224,85,135,0.08))',
+          border: '1px solid rgba(255,107,157,0.3)', borderRadius: 14,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,107,157,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <ListPlus size={16} color="var(--pink)" />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--pink)' }}>Adding to playlist</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pendingPlaylist.name}</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Tap + on any song</div>
+            <button
+              onClick={() => setPendingPlaylist(null)}
+              style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}
+            ><X size={13} /></button>
+          </div>
+        </div>
+      )}
+
       {/* Search bar */}
       <div className="search-bar-wrap">
         <div className="search-bar">
