@@ -1,136 +1,208 @@
 // ============================================================
 // SOUNDWAVE — useYouTubePlayer Hook
-// Manages YouTube IFrame API lifecycle.
+// Module-level singleton so initialization runs exactly once
+// regardless of how many components call this hook or how many
+// times they re-render.
 // ============================================================
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { usePlayerStore } from '@/store/playStore';
 import { useLibraryStore } from '@/store/libraryStore';
 import { StorageService } from '@/services/storage';
+import { useMediaSession } from './Usemediasession';
 import type { YTPlayer, YTPlayerOptions, Song } from '@/types';
 
 declare global {
   interface Window {
     YT: {
       Player: new (el: HTMLElement | string, options: YTPlayerOptions) => YTPlayer;
-      PlayerState: {
-        ENDED: number;
-        PLAYING: number;
-        PAUSED: number;
-        BUFFERING: number;
-        CUED: number;
-      };
+      PlayerState: { ENDED: number; PLAYING: number; PAUSED: number; BUFFERING: number; CUED: number; };
     };
     onYouTubeIframeAPIReady: () => void;
   }
 }
 
-export function useYouTubePlayer() {
-  const intervalRef = useRef<number | null>(null);
-  const { setYTPlayer, setReady, setPlaying } = usePlayerStore();
+// ── Module-level singletons ──────────────────────────────────
+// These live outside React so they are NEVER reset by re-renders.
+let ytInitialized  = false;  // YT player created?
+let progressTimer: number | null = null;
+let bgAudio: HTMLAudioElement | null = null;
 
-  const stopProgress = useCallback(() => {
-    if (intervalRef.current !== null) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
+// Silent 1-second looping MP3 — holds the OS audio session alive
+const SILENT_MP3 =
+  'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA' +
+  '//OEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDA' +
+  'wMDAwMDAwMDMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM9PT09PT09PT09PT09PT09PT09PT09PT09PT3/' +
+  '//////////////////////////////////////8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs';
 
-  const startProgress = useCallback(() => {
-    stopProgress();
-    intervalRef.current = window.setInterval(() => {
-      const player = usePlayerStore.getState().ytPlayer;
-      if (!player) return;
-      const current = player.getCurrentTime?.() ?? 0;
-      const dur = player.getDuration?.() ?? 0;
-      if (dur > 0) {
-        usePlayerStore.getState().setTime(current, dur);
-      }
-    }, 500);
-  }, [stopProgress]);
+function getBgAudio(): HTMLAudioElement {
+  if (!bgAudio) {
+    bgAudio = new Audio(SILENT_MP3);
+    bgAudio.loop   = true;
+    bgAudio.volume = 0.001;
+  }
+  return bgAudio;
+}
 
-  const handleNext = useCallback(() => {
-    const lib = useLibraryStore.getState();
-    if (lib.songs.length === 0) return;
-    const { isShuffled } = usePlayerStore.getState();
-    const nextIdx = isShuffled
-      ? Math.floor(Math.random() * lib.songs.length)
-      : (lib.currentIndex + 1) % lib.songs.length;
-    lib.setCurrentIndex(nextIdx);
-    const song = lib.songs[nextIdx];
+function startProgress() {
+  if (progressTimer !== null) return; // already running
+  progressTimer = window.setInterval(() => {
     const player = usePlayerStore.getState().ytPlayer;
-    if (player && song) {
-      player.loadVideoById(song.youtubeId);
-      usePlayerStore.getState().setCurrentSong(song);
-      StorageService.addToRecent(song);
+    if (!player) return;
+    const current = player.getCurrentTime?.() ?? 0;
+    const dur     = player.getDuration?.()    ?? 0;
+    if (dur > 0) usePlayerStore.getState().setTime(current, dur);
+  }, 500);
+}
+
+function stopProgress() {
+  if (progressTimer !== null) {
+    window.clearInterval(progressTimer);
+    progressTimer = null;
+  }
+}
+
+function bgActivate() {
+  getBgAudio().play().catch(() => {});
+}
+
+function bgDeactivate() {
+  getBgAudio().pause();
+}
+
+// ── Singleton next/prev (defined once, never recreated) ───────
+function handleNext() {
+  const lib = useLibraryStore.getState();
+  if (lib.songs.length === 0) return;
+  const { isShuffled } = usePlayerStore.getState();
+  const nextIdx = isShuffled
+    ? Math.floor(Math.random() * lib.songs.length)
+    : (lib.currentIndex + 1) % lib.songs.length;
+  lib.setCurrentIndex(nextIdx);
+  const song   = lib.songs[nextIdx];
+  const player = usePlayerStore.getState().ytPlayer;
+  if (player && song) {
+    player.loadVideoById(song.youtubeId);
+    usePlayerStore.getState().setCurrentSong(song);
+    StorageService.addToRecent(song);
+  }
+}
+
+function handlePrevious() {
+  const player = usePlayerStore.getState().ytPlayer;
+  if (!player) return;
+  const current = player.getCurrentTime?.() ?? 0;
+  if (current > 3) { player.seekTo(0, true); return; }
+  const lib     = useLibraryStore.getState();
+  const prevIdx = (lib.currentIndex - 1 + lib.songs.length) % lib.songs.length;
+  lib.setCurrentIndex(prevIdx);
+  const song = lib.songs[prevIdx];
+  if (song) {
+    player.loadVideoById(song.youtubeId);
+    usePlayerStore.getState().setCurrentSong(song);
+  }
+}
+
+// ── Single YT player init ─────────────────────────────────────
+function initYTPlayer() {
+  if (ytInitialized) return;
+  if (!window.YT?.Player) return;
+  const el = document.getElementById('yt-player-container');
+  if (!el) return;
+
+  ytInitialized = true; // set BEFORE new Player() to prevent double-init
+
+  const { setYTPlayer, setReady, setPlaying } = usePlayerStore.getState();
+
+  const player = new window.YT.Player(el, {
+    height: '0',
+    width:  '0',
+    playerVars: { autoplay: 0, controls: 0, rel: 0, modestbranding: 1 },
+    events: {
+      onReady: ({ target }) => {
+        target.setVolume(usePlayerStore.getState().volume);
+        setYTPlayer(target as YTPlayer);
+        setReady(true);
+      },
+      onStateChange: ({ data }) => {
+        if (!window.YT) return;
+        switch (data) {
+          case window.YT.PlayerState.PLAYING:
+            usePlayerStore.getState().setPlaying(true);
+            startProgress();
+            bgActivate();
+            break;
+          case window.YT.PlayerState.PAUSED:
+            usePlayerStore.getState().setPlaying(false);
+            stopProgress();
+            bgDeactivate();
+            break;
+          case window.YT.PlayerState.ENDED: {
+            usePlayerStore.getState().setPlaying(false);
+            stopProgress();
+            bgDeactivate();
+            const { repeatMode: rm } = usePlayerStore.getState();
+            if (rm === 2) {
+              player.seekTo(0, true);
+              player.playVideo();
+            } else {
+              handleNext();
+            }
+            break;
+          }
+        }
+      },
+      onError: () => {
+        console.warn('[YT] Playback error — skipping');
+        window.setTimeout(handleNext, 1500);
+      },
+    },
+  });
+}
+
+// ── Hook (thin wrapper — no init logic, just actions + media session) ─
+export function useYouTubePlayer() {
+  // ── One-time YT API bootstrap (only the FIRST call does real work) ──
+  useEffect(() => {
+    if (ytInitialized) return; // already done — no-op for every subsequent caller
+    if (window.YT?.Player) {
+      initYTPlayer();
+    } else {
+      // Only inject the <script> tag once
+      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        const tag = document.createElement('script');
+        tag.src   = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      }
+      // Safe to overwrite — all callers point to the same initYTPlayer function
+      window.onYouTubeIframeAPIReady = initYTPlayer;
     }
+    // NO cleanup stopProgress() here — that was killing the interval on re-render
+  }, []); // empty deps = truly runs once per mount, no re-runs
+
+  // ── Media Session (lock screen controls) ───────────────────
+  const currentSong = usePlayerStore(s => s.currentSong);
+  const isPlaying   = usePlayerStore(s => s.isPlaying);
+  const currentTime = usePlayerStore(s => s.currentTime);
+  const duration    = usePlayerStore(s => s.duration);
+
+  const seekToSeconds = useCallback((seconds: number) => {
+    usePlayerStore.getState().ytPlayer?.seekTo(seconds, true);
   }, []);
 
-  const initPlayer = useCallback(() => {
-    if (!window.YT?.Player) return;
-    const el = document.getElementById('yt-player-container');
-    if (!el) return;
+  useMediaSession(currentSong, isPlaying, currentTime, duration, {
+    onPlay:     () => usePlayerStore.getState().ytPlayer?.playVideo(),
+    onPause:    () => usePlayerStore.getState().ytPlayer?.pauseVideo(),
+    onNext:     handleNext,
+    onPrevious: handlePrevious,
+    onSeek:     seekToSeconds,
+  });
 
-    const player = new window.YT.Player(el, {
-      height: '0',
-      width: '0',
-      playerVars: { autoplay: 0, controls: 0, rel: 0, modestbranding: 1 },
-      events: {
-        onReady: ({ target }) => {
-          target.setVolume(usePlayerStore.getState().volume);
-          setYTPlayer(target as YTPlayer);
-          setReady(true);
-        },
-        onStateChange: ({ data }) => {
-          if (!window.YT) return;
-          switch (data) {
-            case window.YT.PlayerState.PLAYING:
-              setPlaying(true);
-              startProgress();
-              break;
-            case window.YT.PlayerState.PAUSED:
-              setPlaying(false);
-              stopProgress();
-              break;
-            case window.YT.PlayerState.ENDED: {
-              setPlaying(false);
-              stopProgress();
-              const { repeatMode: rm } = usePlayerStore.getState();
-              if (rm === 2) {
-                player.seekTo(0, true);
-                player.playVideo();
-              } else {
-                handleNext();
-              }
-              break;
-            }
-          }
-        },
-        onError: () => {
-          console.warn('[YT] Playback error — skipping');
-          window.setTimeout(handleNext, 1500);
-        },
-      },
-    });
-  }, [setYTPlayer, setReady, setPlaying, startProgress, stopProgress, handleNext]);
-
-  useEffect(() => {
-    if (window.YT?.Player) {
-      initPlayer();
-    } else {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      document.head.appendChild(tag);
-      window.onYouTubeIframeAPIReady = initPlayer;
-    }
-    return () => stopProgress();
-  }, [initPlayer, stopProgress]);
-
-  // ─── Player Actions ──────────────────────────────────────
-
+  // ── Public actions ──────────────────────────────────────────
   const loadAndPlay = useCallback((song: Song) => {
     const player = usePlayerStore.getState().ytPlayer;
     if (!player) return;
+    bgActivate();
     player.loadVideoById(song.youtubeId);
     usePlayerStore.getState().setCurrentSong(song);
     StorageService.addToRecent(song);
@@ -140,36 +212,22 @@ export function useYouTubePlayer() {
   const toggle = useCallback(() => {
     const player = usePlayerStore.getState().ytPlayer;
     if (!player) return;
-    const { isPlaying } = usePlayerStore.getState();
-    isPlaying ? player.pauseVideo() : player.playVideo();
+    if (usePlayerStore.getState().isPlaying) {
+      player.pauseVideo();
+    } else {
+      bgActivate();
+      player.playVideo();
+    }
   }, []);
 
   const seekTo = useCallback((pct: number) => {
     const player = usePlayerStore.getState().ytPlayer;
     if (!player) return;
-    const dur = player.getDuration?.() ?? 0;
-    player.seekTo((pct / 100) * dur, true);
+    player.seekTo((pct / 100) * (player.getDuration?.() ?? 0), true);
   }, []);
 
-  const next = useCallback(() => handleNext(), [handleNext]);
-
-  const previous = useCallback(() => {
-    const player = usePlayerStore.getState().ytPlayer;
-    if (!player) return;
-    const current = player.getCurrentTime?.() ?? 0;
-    if (current > 3) {
-      player.seekTo(0, true);
-      return;
-    }
-    const lib = useLibraryStore.getState();
-    const prevIdx = (lib.currentIndex - 1 + lib.songs.length) % lib.songs.length;
-    lib.setCurrentIndex(prevIdx);
-    const song = lib.songs[prevIdx];
-    if (song) {
-      player.loadVideoById(song.youtubeId);
-      usePlayerStore.getState().setCurrentSong(song);
-    }
-  }, []);
+  const next     = useCallback(() => handleNext(),     []);
+  const previous = useCallback(() => handlePrevious(), []);
 
   return { loadAndPlay, toggle, next, previous, seekTo };
 }
