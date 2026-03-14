@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Sidebar } from '@/components/Layout/Sidebar';
 import { BottomNav } from '@/components/Layout/Bottomnav';
 import { NowPlayingBar, MobilePlayer } from '@/components/player/Nowplayingbar';
 import { FullPlayer } from '@/components/player/Fullplayer';
+import { AddToPlaylistModal } from '@/components/common/Addtoplaylistmodal';
 import { HomeView } from '@/components/home/Homeview';
 import { SearchView } from '@/components/search/Searchview';
 import { LibraryView } from '@/components/library/Libraryview';
@@ -33,8 +34,8 @@ export function AppLayout() {
     switch (currentView) {
       case 'home':    return <HomeView />;
       case 'search':  return <SearchView />;
-      case 'library': return <LibraryView />;
-      case 'liked':   return <LibraryView />;
+      case 'library': return <LibraryView onNavigate={setCurrentView} />;
+      case 'liked':   return <LibraryView onNavigate={setCurrentView} />;
       case 'profile': return (
         <ProfileView
           initialScreen={desktopProfile ?? undefined}
@@ -70,6 +71,7 @@ export function AppLayout() {
       <MobilePlayer />
       <BottomNav currentView={currentView} onViewChange={setCurrentView} />
       <FullPlayer />
+      <AddToPlaylistModal />
     </div>
   );
 }
