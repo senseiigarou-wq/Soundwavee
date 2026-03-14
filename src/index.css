@@ -319,8 +319,32 @@ img { display: block; max-width: 100%; }
 .songs-grid-sm { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 
 /* ─── Song Card ────────────────────────────────────────────── */
-.song-card {
-  background: var(--bg-card);
+/* ─── History row ──────────────────────────────────────────── */
+.history-row { position: relative; }
+.history-remove-btn {
+  position: absolute;
+  top: 50%; right: 10px;
+  transform: translateY(-50%);
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  z-index: 2;
+  flex-shrink: 0;
+}
+.history-row:hover .history-remove-btn { opacity: 1; }
+.history-remove-btn:hover { background: rgba(255,80,80,0.15); color: #ff6b6b; border-color: rgba(255,80,80,0.25); }
+/* On touch devices always show the button (no hover) */
+@media (hover: none) {
+  .history-remove-btn { opacity: 1; }
+}
+
+.song-card {  background: var(--bg-card);
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
@@ -747,10 +771,10 @@ input[type="range"].volume { width: 80px; }
   background: rgba(28,28,28,0.98);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 16px;
-  padding: 10px 14px;
+  padding: 10px 14px 10px;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 0;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.05);
@@ -1141,7 +1165,7 @@ input[type="range"].volume { width: 80px; }
 @media (max-width: 767px) {
   :root {
     --nav-h: 60px;
-    --mobile-player-h: 68px;
+    --mobile-player-h: 84px;
   }
 
   /* Hide desktop sidebar and player bar */
