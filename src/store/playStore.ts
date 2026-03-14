@@ -14,10 +14,12 @@ interface PlayerStore {
   isShuffled: boolean;
   repeatMode: RepeatMode;
   volume: number;
-  isMuted: number; // 0 = not muted, saved volume when muted
+  isMuted: number;
   currentTime: number;
   duration: number;
   isFullPlayerOpen: boolean;
+  addToPlaylistSong: Song | null;  // song currently targeted by Add-to-Playlist modal
+  pendingPlaylist: { id: string; name: string } | null; // "add songs to this playlist" context
 
   // Actions
   setYTPlayer: (player: YTPlayer) => void;
@@ -31,6 +33,9 @@ interface PlayerStore {
   cycleRepeat: () => void;
   openFullPlayer: () => void;
   closeFullPlayer: () => void;
+  openAddToPlaylist: (song: Song) => void;
+  closeAddToPlaylist: () => void;
+  setPendingPlaylist: (pl: { id: string; name: string } | null) => void;
 }
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
@@ -45,6 +50,8 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   currentTime: 0,
   duration: 0,
   isFullPlayerOpen: false,
+  addToPlaylistSong: null,
+  pendingPlaylist: null,
 
   setYTPlayer: (player) => set({ ytPlayer: player }),
   setReady: (ready) => set({ isReady: ready }),
@@ -77,4 +84,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   openFullPlayer: () => set({ isFullPlayerOpen: true }),
   closeFullPlayer: () => set({ isFullPlayerOpen: false }),
+  openAddToPlaylist: (song) => set({ addToPlaylistSong: song }),
+  closeAddToPlaylist: () => set({ addToPlaylistSong: null }),
+  setPendingPlaylist: (pl) => set({ pendingPlaylist: pl }),
 }));
