@@ -11,7 +11,7 @@ function fmt(s: number) {
 }
 
 export function FullPlayer() {
-  const { currentSong, isPlaying, isShuffled, repeatMode, currentTime, duration, isFullPlayerOpen, isReady, closeFullPlayer, toggleShuffle, cycleRepeat, setVolume, volume, setCurrentSong } = usePlayerStore();
+  const { currentSong, isPlaying, isShuffled, repeatMode, currentTime, duration, isFullPlayerOpen, isReady, closeFullPlayer, toggleShuffle, cycleRepeat, setVolume, volume } = usePlayerStore();
   const { likedSongs, toggleLike } = useLibraryStore();
   const { toggle, next, previous, seekTo } = useYouTubePlayer();
   const { showToast } = useToast();
@@ -33,7 +33,7 @@ export function FullPlayer() {
           <button className="icon-btn" onClick={closeFullPlayer}><ChevronDown size={22} /></button>
           <span className="full-player-label">Now Playing</span>
           <button
-            onClick={() => { closeFullPlayer(); setCurrentSong(null); }}
+            onClick={closeFullPlayer}
             title="Close player"
             style={{
               width: 32, height: 32, borderRadius: '50%',
