@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Heart, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Heart, Volume2, VolumeX, ListPlus } from 'lucide-react';
 import { usePlayerStore } from '@/store/playStore';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useYouTubePlayer } from '@/hooks/useYoutubePlayer';
@@ -12,7 +12,7 @@ function fmt(s: number) {
 }
 
 export function NowPlayingBar() {
-  const { currentSong, isPlaying, isShuffled, repeatMode, volume, isMuted, currentTime, duration, isReady, openFullPlayer, toggleShuffle, cycleRepeat, toggleMute, setVolume } = usePlayerStore();
+  const { currentSong, isPlaying, isShuffled, repeatMode, volume, isMuted, currentTime, duration, isReady, openFullPlayer, toggleShuffle, cycleRepeat, toggleMute, setVolume, openAddToPlaylist } = usePlayerStore();
   const { likedSongs, toggleLike } = useLibraryStore();
   const { toggle, next, previous, seekTo } = useYouTubePlayer();
   const { showToast } = useToast();
@@ -82,8 +82,13 @@ export function NowPlayingBar() {
         </div>
       </div>
 
-      {/* Volume */}
+      {/* Volume + Add to Playlist */}
       <div className="player-right">
+        {currentSong && (
+          <button className="ctrl-btn" onClick={() => openAddToPlaylist(currentSong)} title="Add to playlist" style={{ marginRight: 4 }}>
+            <ListPlus size={16} />
+          </button>
+        )}
         <div className="volume-wrap">
           <button className="ctrl-btn" onClick={toggleMute}>
             {isMuted > 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
@@ -96,32 +101,51 @@ export function NowPlayingBar() {
 }
 
 export function MobilePlayer() {
-  const { currentSong, isPlaying, openFullPlayer } = usePlayerStore();
+  const { currentSong, isPlaying, openFullPlayer, currentTime, duration, openAddToPlaylist } = usePlayerStore();
   const { likedSongs, toggleLike } = useLibraryStore();
-  const { toggle, next } = useYouTubePlayer();
+  const { toggle, next, seekTo } = useYouTubePlayer();
 
   if (!currentSong) return null;
   const isLiked = likedSongs.some(s => s.youtubeId === currentSong.youtubeId);
+  const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
     <div className="mobile-player">
-      <div className="mobile-player-thumb" style={{ borderRadius: 8, overflow: 'hidden', background: '#1a1a1a' }} onClick={openFullPlayer}>
-        {currentSong.cover ? <img src={currentSong.cover} alt={currentSong.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><SoundwaveIcon size={20} color="rgba(255,255,255,0.25)" /></div>}
+      {/* Top row: thumb + info + controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+        <div className="mobile-player-thumb" style={{ borderRadius: 8, overflow: 'hidden', background: '#1a1a1a', flexShrink: 0 }} onClick={openFullPlayer}>
+          {currentSong.cover ? <img src={currentSong.cover} alt={currentSong.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><SoundwaveIcon size={20} color="rgba(255,255,255,0.25)" /></div>}
+        </div>
+        <div className="mobile-player-info" onClick={openFullPlayer}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentSong.title}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-sub)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentSong.artist}</div>
+        </div>
+        <div className="mobile-player-controls">
+          <button className="icon-btn" onClick={e => { e.stopPropagation(); openAddToPlaylist(currentSong); }} title="Add to playlist">
+            <ListPlus size={16} />
+          </button>
+          <button className={`icon-btn${isLiked ? ' active' : ''}`} onClick={e => { e.stopPropagation(); toggleLike(currentSong); }}>
+            <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+          </button>
+          <button className="ctrl-play" style={{ width: 36, height: 36 }} onClick={e => { e.stopPropagation(); toggle(); }}>
+            {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+          </button>
+          <button className="ctrl-btn" onClick={e => { e.stopPropagation(); next(); }}>
+            <SkipForward size={18} />
+          </button>
+        </div>
       </div>
-      <div className="mobile-player-info" onClick={openFullPlayer}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentSong.title}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-sub)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentSong.artist}</div>
-      </div>
-      <div className="mobile-player-controls">
-        <button className={`icon-btn${isLiked ? ' active' : ''}`} onClick={e => { e.stopPropagation(); toggleLike(currentSong); }}>
-          <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
-        </button>
-        <button className="ctrl-play" style={{ width: 36, height: 36 }} onClick={e => { e.stopPropagation(); toggle(); }}>
-          {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-        </button>
-        <button className="ctrl-btn" onClick={e => { e.stopPropagation(); next(); }}>
-          <SkipForward size={18} />
-        </button>
+
+      {/* Progress row: elapsed — bar — total */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', marginTop: 7 }}>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 28, flexShrink: 0 }}>{fmt(currentTime)}</span>
+        <div
+          style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.12)', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+          onClick={e => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); seekTo(((e.clientX - r.left) / r.width) * 100); }}
+        >
+          <div style={{ width: `${pct}%`, height: '100%', background: 'var(--pink)', borderRadius: 2, transition: 'width 0.5s linear' }} />
+        </div>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 28, textAlign: 'right', flexShrink: 0 }}>{fmt(duration)}</span>
       </div>
     </div>
   );
