@@ -61,6 +61,8 @@ interface LibraryStore extends LibraryState {
   removeFromPlaylist:  (playlistId: string, youtubeId: string) => void;
 
   addToRecent:         (song: Song) => void;
+  removeFromRecent:    (youtubeId: string) => void;
+  clearHistory:        () => void;
 }
 
 export const useLibraryStore = create<LibraryStore>((set, get) => ({
@@ -219,5 +221,22 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
 
     const uid = getUid();
     if (uid) syncBg(() => saveRecentSongs(uid, recentSongs));
+  },
+
+  removeFromRecent: (youtubeId) => {
+    StorageService.removeFromRecent(youtubeId);
+    const recentSongs = StorageService.getRecentSongs();
+    set({ recentSongs });
+
+    const uid = getUid();
+    if (uid) syncBg(() => saveRecentSongs(uid, recentSongs));
+  },
+
+  clearHistory: () => {
+    StorageService.clearRecentSongs();
+    set({ recentSongs: [] });
+
+    const uid = getUid();
+    if (uid) syncBg(() => saveRecentSongs(uid, []));
   },
 }));
