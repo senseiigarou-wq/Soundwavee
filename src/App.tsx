@@ -2,7 +2,7 @@
 // SOUNDWAVE — App Root
 // ============================================================
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useYouTubePlayer } from '@/hooks/useYoutubePlayer';
@@ -63,3 +63,5 @@ export function App() {
     </ToastProvider>
   );
 }
+
+export default App;
