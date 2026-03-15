@@ -51,6 +51,7 @@ interface LibraryStore extends LibraryState {
   addSong:             (song: Song) => void;
   removeSong:          (youtubeId: string) => void;
   setCurrentIndex:     (index: number) => void;
+  loadQueue:           (songs: Song[], startIndex?: number) => void;
 
   toggleLike:          (song: Song) => boolean;
   isLiked:             (youtubeId: string) => boolean;
@@ -114,6 +115,14 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     const updated = [...songs, { ...song, addedAt: new Date().toISOString() }];
     StorageService.saveLibrary(updated);
     set({ songs: updated });
+  },
+
+  // Load an entire array as the active playback queue and set the
+  // starting index — used when playing from a playlist so next/prev work.
+  loadQueue: (songs, startIndex = 0) => {
+    const withTimestamp = songs.map(s => ({ ...s, addedAt: s.addedAt ?? new Date().toISOString() }));
+    StorageService.saveLibrary(withTimestamp);
+    set({ songs: withTimestamp, currentIndex: startIndex });
   },
 
   removeSong: (youtubeId) => {
