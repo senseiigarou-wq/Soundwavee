@@ -1,5 +1,6 @@
 // ============================================================
 // SOUNDWAVE — Artist Profile Page
+// redeploy
 // Shows artist banner, songs, follow button, related artists.
 // ============================================================
 import React, { useEffect, useState, useCallback } from 'react';
