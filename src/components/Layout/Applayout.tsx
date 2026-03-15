@@ -8,7 +8,7 @@ import { HomeView } from '@/components/home/Homeview';
 import { SearchView } from '@/components/search/Searchview';
 import { LibraryView } from '@/components/library/LibraryView';
 import { ProfileView } from '@/components/profile/Profileview';
-import { ArtistView } from '@/components/artist/Artistview';
+import { ArtistView } from '@/components/artist/ArtistView';
 import { SidebarProfilePanel } from '@/components/profile/Sidebarprofilepanel';
 import type { View, Artist } from '@/types';
 
