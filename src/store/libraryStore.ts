@@ -22,7 +22,7 @@ import {
   saveRecentSongs,
   type UserLibraryData,
 } from '@/services/Firestoreservice';
-import type { Song, Playlist, LibraryState } from '@/types';
+import type { Song, Playlist, Artist, LibraryState } from '@/types';
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -63,6 +63,10 @@ interface LibraryStore extends LibraryState {
   addToRecent:         (song: Song) => void;
   removeFromRecent:    (youtubeId: string) => void;
   clearHistory:        () => void;
+
+  followArtist:        (artist: Artist) => void;
+  unfollowArtist:      (name: string) => void;
+  isFollowing:         (name: string) => boolean;
 }
 
 export const useLibraryStore = create<LibraryStore>((set, get) => ({
@@ -71,15 +75,17 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
   playlists:         [],
   likedSongs:        [],
   recentSongs:       [],
+  followedArtists:   [],
   currentPlaylistId: null,
 
   // ── Init from localStorage (before Firestore loads) ─────────
   init: () => {
     set({
-      songs:       StorageService.getLibrary(),
-      playlists:   StorageService.getPlaylists(),
-      likedSongs:  StorageService.getLikedSongs(),
-      recentSongs: StorageService.getRecentSongs(),
+      songs:           StorageService.getLibrary(),
+      playlists:       StorageService.getPlaylists(),
+      likedSongs:      StorageService.getLikedSongs(),
+      recentSongs:     StorageService.getRecentSongs(),
+      followedArtists: StorageService.getFollowedArtists(),
     });
   },
 
@@ -239,4 +245,21 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     const uid = getUid();
     if (uid) syncBg(() => saveRecentSongs(uid, []));
   },
+
+  // ── Followed Artists ────────────────────────────────────────
+  followArtist: (artist) => {
+    const current = get().followedArtists;
+    if (current.some(a => a.name === artist.name)) return;
+    const updated = [artist, ...current];
+    StorageService.saveFollowedArtists(updated);
+    set({ followedArtists: updated });
+  },
+
+  unfollowArtist: (name) => {
+    const updated = get().followedArtists.filter(a => a.name !== name);
+    StorageService.saveFollowedArtists(updated);
+    set({ followedArtists: updated });
+  },
+
+  isFollowing: (name) => get().followedArtists.some(a => a.name === name),
 }));
