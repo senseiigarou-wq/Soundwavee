@@ -71,6 +71,7 @@ export interface LibraryState {
   playlists: Playlist[];
   likedSongs: Song[];
   recentSongs: Song[];
+  followedArtists: Artist[];
   currentPlaylistId: string | null;
 }
 
@@ -78,7 +79,7 @@ export interface LibraryState {
 
 export type Genre = 'all' | 'opm' | 'phonk' | 'pop' | 'rnb' | 'hiphop' | 'indie';
 
-export type View = 'home' | 'search' | 'library' | 'liked' | 'profile';
+export type View = 'home' | 'search' | 'library' | 'liked' | 'profile' | 'artist';
 
 export interface SearchResult {
   songs: Song[];
