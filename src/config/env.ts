@@ -9,6 +9,12 @@ function getEnv(key: string, fallback = ''): string {
 }
 
 export const ENV = {
+  // ── YouTube proxy worker URL ──────────────────────────────
+  // Set VITE_WORKER_URL to your deployed Cloudflare Worker URL.
+  // e.g. https://soundwave-worker.your-subdomain.workers.dev
+  WORKER_URL: getEnv('VITE_WORKER_URL', ''),
+
+  // Direct YouTube API key (only used if WORKER_URL is not set)
   YOUTUBE_API_KEY: getEnv('VITE_YOUTUBE_API_KEY'),
 
   FIREBASE_API_KEY:             getEnv('VITE_FIREBASE_API_KEY'),
@@ -19,7 +25,7 @@ export const ENV = {
   FIREBASE_APP_ID:              getEnv('VITE_FIREBASE_APP_ID'),
 
   APP_NAME: getEnv('VITE_APP_NAME', 'Soundwave'),
-  APP_URL:  getEnv('VITE_APP_URL',  'https://vitejsvite7ynvgzyg-0vy0--5173--d7bdb599.local-credentialless.webcontainer.io/'),
+  APP_URL:  getEnv('VITE_APP_URL',  'http://localhost:5173'),
 
   RATE_LIMIT_MAX_REQUESTS: parseInt(getEnv('VITE_RATE_LIMIT_MAX_REQUESTS', '30')),
   RATE_LIMIT_WINDOW_MS:    parseInt(getEnv('VITE_RATE_LIMIT_WINDOW_MS',    '60000')),
@@ -27,10 +33,18 @@ export const ENV = {
   AUTH_LOCKOUT_MS:         parseInt(getEnv('VITE_AUTH_LOCKOUT_MS',   '900000')),
   TRENDING_CACHE_TTL:      parseInt(getEnv('VITE_TRENDING_CACHE_TTL','1800000')),
 
+  isWorkerConfigured(): boolean {
+    return Boolean(this.WORKER_URL && this.WORKER_URL.startsWith('https://'));
+  },
   isYouTubeConfigured(): boolean {
-    return Boolean(this.YOUTUBE_API_KEY && !this.YOUTUBE_API_KEY.startsWith('YOUR_'));
+    return this.isWorkerConfigured() ||
+      Boolean(this.YOUTUBE_API_KEY && !this.YOUTUBE_API_KEY.startsWith('YOUR_'));
   },
   isFirebaseConfigured(): boolean {
-    return Boolean(this.FIREBASE_API_KEY && !this.FIREBASE_API_KEY.startsWith('YOUR_') && !this.FIREBASE_API_KEY.startsWith('AIzaSy_'));
+    return Boolean(
+      this.FIREBASE_API_KEY &&
+      !this.FIREBASE_API_KEY.startsWith('YOUR_') &&
+      !this.FIREBASE_API_KEY.startsWith('AIzaSy_')
+    );
   },
 };
