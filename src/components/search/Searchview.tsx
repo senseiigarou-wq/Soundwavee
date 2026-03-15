@@ -28,7 +28,7 @@ export function SearchView({ onArtistClick }: { onArtistClick?: (artist: import(
   const debounceRef = useRef<number | null>(null);
 
   const { currentSong, isPlaying, pendingPlaylist, setPendingPlaylist, openAddToPlaylist } = usePlayerStore();
-  const { likedSongs, addSong } = useLibraryStore();
+  const { likedSongs, loadQueue } = useLibraryStore();
   const { loadAndPlay } = useYouTubePlayer();
   const { showToast } = useToast();
 
@@ -56,9 +56,13 @@ export function SearchView({ onArtistClick }: { onArtistClick?: (artist: import(
   };
 
   const handlePlay = useCallback((song: Song) => {
-    addSong(song); loadAndPlay(song);
+    // Load all visible search results as the queue so next/prev works
+    const queue = results.length > 0 ? results : recommended.length > 0 ? recommended : [song];
+    const startIndex = Math.max(0, queue.findIndex(s => s.youtubeId === song.youtubeId));
+    loadQueue(queue, startIndex);
+    loadAndPlay(song);
     showToast(`Playing: ${song.title.slice(0, 28)}`);
-  }, [addSong, loadAndPlay, showToast]);
+  }, [results, recommended, loadQueue, loadAndPlay, showToast]);
 
   const handleLike = useCallback((song: Song) => {
     const liked = useLibraryStore.getState().toggleLike(song);
