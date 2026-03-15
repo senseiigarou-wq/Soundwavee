@@ -30,51 +30,45 @@ export function AppLayout() {
     setCurrentView('profile');
   };
 
-  // Navigate to artist page — supports back-stack for related artist clicks
   const navigateToArtist = (artist: Artist, fromView?: View) => {
-    if (fromView) setArtistHistory([]); // fresh entry from non-artist view
+    if (fromView) setArtistHistory([]);
     setCurrentArtist(artist);
     setCurrentView('artist');
   };
 
   const handleArtistBack = () => {
     if (artistHistory.length > 0) {
-      // Pop back to previous artist
       const prev = [...artistHistory];
       const last = prev.pop()!;
       setArtistHistory(prev);
       setCurrentArtist(last);
     } else {
-      // Back to wherever we came from
       setCurrentArtist(null);
       setCurrentView('home');
     }
   };
 
   const handleRelatedArtistClick = (artist: Artist) => {
-    // Push current artist to history stack
-    if (currentArtist) {
-      setArtistHistory(prev => [...prev, currentArtist]);
-    }
+    if (currentArtist) setArtistHistory(prev => [...prev, currentArtist]);
     setCurrentArtist(artist);
   };
 
   const renderView = () => {
     switch (currentView) {
-      case 'home':    return <HomeView onArtistClick={a => navigateToArtist(a, 'home')} />;
-      case 'search':  return <SearchView onArtistClick={a => navigateToArtist(a, 'search')} />;
-      case 'library': return <LibraryView onNavigate={setCurrentView} onArtistClick={a => navigateToArtist(a, 'library')} />;
-      case 'liked':   return <LibraryView onNavigate={setCurrentView} onArtistClick={a => navigateToArtist(a, 'liked')} />;
+      case 'home':    return <HomeView onArtistClick={(a: Artist) => navigateToArtist(a, 'home')} />;
+      case 'search':  return <SearchView onArtistClick={(a: Artist) => navigateToArtist(a, 'search')} />;
+      case 'library': return <LibraryView onNavigate={setCurrentView} onArtistClick={(a: Artist) => navigateToArtist(a, 'library')} />;
+      case 'liked':   return <LibraryView onNavigate={setCurrentView} onArtistClick={(a: Artist) => navigateToArtist(a, 'liked')} />;
       case 'artist':  return currentArtist
         ? <ArtistView artist={currentArtist} onBack={handleArtistBack} onArtistClick={handleRelatedArtistClick} />
-        : <HomeView onArtistClick={a => navigateToArtist(a, 'home')} />;
+        : <HomeView onArtistClick={(a: Artist) => navigateToArtist(a, 'home')} />;
       case 'profile': return (
         <ProfileView
           initialScreen={desktopProfile ?? undefined}
           onScreenClear={() => setDesktopProfile(null)}
         />
       );
-      default: return <HomeView onArtistClick={a => navigateToArtist(a, 'home')} />;
+      default: return <HomeView onArtistClick={(a: Artist) => navigateToArtist(a, 'home')} />;
     }
   };
 
@@ -83,7 +77,7 @@ export function AppLayout() {
       <YouTubeContainer />
       <Sidebar
         currentView={currentView}
-        onViewChange={v => { setCurrentArtist(null); setArtistHistory([]); setCurrentView(v); }}
+        onViewChange={(v: View) => { setCurrentArtist(null); setArtistHistory([]); setCurrentView(v); }}
         onUserClick={() => setPanelOpen(v => !v)}
       />
       {panelOpen && (
@@ -103,7 +97,7 @@ export function AppLayout() {
       <MobilePlayer />
       <BottomNav
         currentView={currentView}
-        onViewChange={v => { setCurrentArtist(null); setArtistHistory([]); setCurrentView(v); }}
+        onViewChange={(v: View) => { setCurrentArtist(null); setArtistHistory([]); setCurrentView(v); }}
       />
       <FullPlayer />
       <AddToPlaylistModal />
