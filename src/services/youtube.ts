@@ -5,6 +5,7 @@
 // ============================================================
 
 import { ENV } from '@/config/env';
+import { WorkerClient } from '@/services/Workerclient';
 import { RateLimiter, RL_ACTIONS } from '@/services/ratelimiter';
 import type { Song, Artist, Genre, CacheEntry } from '@/types';
 
@@ -154,7 +155,11 @@ async function ytFetch(url: string): Promise<{ items: unknown[] } | null> {
 export const YouTubeService = {
   // ─── Search ────────────────────────────────────────────────
 
-  async search(query: string, maxResults = 24): Promise<Song[]> {
+  async search(query: string, maxResults = 10): Promise<Song[]> {
+    // ── Route through Cloudflare Worker proxy if configured ──
+    if (ENV.isWorkerConfigured()) {
+      return WorkerClient.search(query, Math.min(maxResults, 10));
+    }
     // Input validation
     const validation = RateLimiter.validateSearchQuery(query);
     if (!validation.valid) {
@@ -193,7 +198,12 @@ export const YouTubeService = {
 
   // ─── Trending ──────────────────────────────────────────────
 
-  async getTrending(genre: Genre = 'all', maxResults = 20): Promise<Song[]> {
+  async getTrending(genre: Genre = 'all', maxResults = 10): Promise<Song[]> {
+    if (ENV.isWorkerConfigured()) {
+      const songs = await WorkerClient.getTrending(genre, maxResults);
+      return songs.length ? songs : this.getFallbackByGenre(genre);
+    }
+
     const cacheKey = `trending:${genre}`;
     const cached = trendingCache.get(cacheKey);
     if (cached) return cached;
@@ -243,9 +253,77 @@ export const YouTubeService = {
     }
   },
 
-  // ─── Popular Artists ───────────────────────────────────────
+  // ─── Artist Songs ──────────────────────────────────────────
 
+  async getArtistSongs(artistName: string, channelId?: string, maxResults = 10): Promise<Song[]> {
+    if (ENV.isWorkerConfigured()) {
+      return WorkerClient.getArtistSongs(artistName, channelId, maxResults);
+    }
+    const cacheKey = `artist:${artistName}:${maxResults}`;
+    const cached = searchCache.get(cacheKey);
+    if (cached) return cached;
+
+    const rl = RateLimiter.consume(RL_ACTIONS.SEARCH);
+    if (!rl.allowed || !ENV.isYouTubeConfigured()) {
+      return FALLBACK_SONGS.filter(s =>
+        s.artist.toLowerCase().includes(artistName.toLowerCase())
+      ).slice(0, maxResults);
+    }
+
+    // If we have a channelId, search within that channel for best accuracy
+    const query = channelId
+      ? `${artistName} official music video`
+      : `${artistName} songs`;
+
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${maxResults}&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&order=viewCount&key=${ENV.YOUTUBE_API_KEY}`;
+    const data = await ytFetch(url);
+    if (!data) return [];
+
+    const songs = (data.items as Parameters<typeof mapYTItemToSong>[0][]).map(mapYTItemToSong);
+    searchCache.set(cacheKey, songs, 15 * 60 * 1000); // 15 min cache
+    return songs;
+  },
+
+  // ─── Related Artists ───────────────────────────────────────
+
+  async getRelatedArtists(artistName: string, maxResults = 6): Promise<Artist[]> {
+    if (ENV.isWorkerConfigured()) {
+      return WorkerClient.getRelatedArtists(artistName, maxResults);
+    }
+    const cacheKey = `related:${artistName}`;
+    const cached = searchCache.get(cacheKey) as unknown as Artist[] | null;
+    if (cached) return cached;
+
+    const rl = RateLimiter.consume(RL_ACTIONS.ARTISTS);
+    if (!rl.allowed || !ENV.isYouTubeConfigured()) return [];
+
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&maxResults=${maxResults}&q=${encodeURIComponent('artist similar to ' + artistName + ' music')}&key=${ENV.YOUTUBE_API_KEY}`;
+    const data = await ytFetch(url);
+    if (!data) return [];
+
+    const items = data.items as {
+      id: { channelId: string };
+      snippet: { title: string; thumbnails: { high?: { url: string }; default?: { url: string } } };
+    }[];
+
+    const artists: Artist[] = items
+      .filter(item => item.snippet.title.toLowerCase() !== artistName.toLowerCase())
+      .map(item => ({
+        name: item.snippet.title,
+        channelId: item.id.channelId,
+        thumbnail: item.snippet.thumbnails.high?.url ?? item.snippet.thumbnails.default?.url ?? '',
+        searchQuery: item.snippet.title,
+      }));
+
+    (searchCache as SimpleCache<unknown>).set(cacheKey, artists, 15 * 60 * 1000);
+    return artists;
+  },
+
+  // ─── Popular Artists ───────────────────────────────────────
   async getPopularArtists(maxResults = 10): Promise<Artist[]> {
+    if (ENV.isWorkerConfigured()) {
+      return WorkerClient.getPopularArtists(maxResults);
+    }
     const rl = RateLimiter.consume(RL_ACTIONS.ARTISTS);
     if (!rl.allowed || !ENV.isYouTubeConfigured()) {
       return FALLBACK_ARTISTS;
