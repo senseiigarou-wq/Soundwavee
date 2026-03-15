@@ -91,5 +91,16 @@ export default defineConfig(({ mode }) => {
     css: {
       postcss: './tailwind.config.js',
     },
+    build: {
+      // Content-hashed filenames — browser always fetches latest JS/CSS after deploy
+      rollupOptions: {
+        output: {
+          entryFileNames: 'assets/[name]-[hash].js',
+          chunkFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash][extname]',
+        },
+      },
+      chunkSizeWarningLimit: 1000,
+    },
   };
 });
