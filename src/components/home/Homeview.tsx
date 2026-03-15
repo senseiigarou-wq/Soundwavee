@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { RefreshCw, ChevronRight } from 'lucide-react';
+import { RefreshCw, ChevronRight, UserPlus, UserCheck } from 'lucide-react';
 import { YouTubeService } from '@/services/youtube';
 import { usePlayerStore } from '@/store/playStore';
 import { useLibraryStore } from '@/store/libraryStore';
@@ -28,14 +28,14 @@ function SkeletonCard() {
   );
 }
 
-export function HomeView() {
+export function HomeView({ onArtistClick }: { onArtistClick?: (artist: Artist) => void }) {
   const [trending, setTrending] = useState<Song[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeGenre, setActiveGenre] = useState<Genre>('all');
 
   const { currentSong, isPlaying } = usePlayerStore();
-  const { likedSongs, addSong } = useLibraryStore();
+  const { likedSongs, addSong, followArtist, unfollowArtist, isFollowing } = useLibraryStore();
   const recentSongs = useLibraryStore(s => s.recentSongs);
   const { loadAndPlay } = useYouTubePlayer();
   const { showToast } = useToast();
@@ -124,23 +124,48 @@ export function HomeView() {
             <h2 className="section-title">Popular Artists</h2>
           </div>
           <div className="artists-grid">
-            {artists.slice(0, 8).map(artist => (
-              <div
-                key={artist.name}
-                className="artist-card"
-                onClick={() => showToast(`Searching for ${artist.name}`)}
-              >
-                <div className="artist-avatar">
-                  {artist.thumbnail
-                    ? <img src={artist.thumbnail} alt={artist.name} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, background: '#1a1a1a' }}>🎤</div>
-                  }
-                  <div className="artist-avatar-ring" />
+            {artists.slice(0, 8).map(artist => {
+              const following = isFollowing(artist.name);
+              return (
+                <div key={artist.name} className="artist-card" style={{ cursor: 'default' }}>
+                  <div className="artist-avatar" style={{ cursor: 'pointer' }} onClick={() => onArtistClick ? onArtistClick(artist) : showToast(`Searching for ${artist.name}`)}>
+                    {artist.thumbnail
+                      ? <img src={artist.thumbnail} alt={artist.name} />
+                      : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, background: '#1a1a1a' }}>🎤</div>
+                    }
+                    <div className="artist-avatar-ring" />
+                  </div>
+                  <div className="artist-name" style={{ cursor: 'pointer' }} onClick={() => onArtistClick ? onArtistClick(artist) : undefined}>{artist.name}</div>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      if (following) {
+                        unfollowArtist(artist.name);
+                        showToast(`Unfollowed ${artist.name}`);
+                      } else {
+                        followArtist(artist);
+                        showToast(`Following ${artist.name} ✓`, 'success');
+                      }
+                    }}
+                    style={{
+                      marginTop: 6,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                      padding: '5px 14px', borderRadius: 999,
+                      background: following ? 'rgba(255,107,157,0.12)' : 'rgba(255,255,255,0.08)',
+                      border: `1px solid ${following ? 'rgba(255,107,157,0.4)' : 'rgba(255,255,255,0.12)'}`,
+                      color: following ? 'var(--pink)' : 'var(--text-sub)',
+                      fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      fontFamily: 'inherit', transition: 'all 0.2s',
+                    }}
+                  >
+                    {following
+                      ? <><UserCheck size={11} /> Following</>
+                      : <><UserPlus size={11} /> Follow</>
+                    }
+                  </button>
                 </div>
-                <div className="artist-name">{artist.name}</div>
-                <div className="artist-role">Artist</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
