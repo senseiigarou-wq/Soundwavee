@@ -6,7 +6,7 @@ import { FullPlayer } from '@/components/player/Fullplayer';
 import { AddToPlaylistModal } from '@/components/common/Addtoplaylistmodal';
 import { HomeView } from '@/components/home/Homeview';
 import { SearchView } from '@/components/search/Searchview';
-import { LibraryView } from '@/components/library/Libraryview';
+import { LibraryView } from '@/components/library/LibraryView';
 import { ProfileView } from '@/components/profile/Profileview';
 import { ArtistView } from '@/components/artist/Artistview';
 import { SidebarProfilePanel } from '@/components/profile/Sidebarprofilepanel';
