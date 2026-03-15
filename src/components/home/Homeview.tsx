@@ -35,7 +35,7 @@ export function HomeView({ onArtistClick }: { onArtistClick?: (artist: Artist) =
   const [activeGenre, setActiveGenre] = useState<Genre>('all');
 
   const { currentSong, isPlaying } = usePlayerStore();
-  const { likedSongs, addSong, followArtist, unfollowArtist, isFollowing } = useLibraryStore();
+  const { likedSongs, followArtist, unfollowArtist, isFollowing, loadQueue } = useLibraryStore();
   const recentSongs = useLibraryStore(s => s.recentSongs);
   const { loadAndPlay } = useYouTubePlayer();
   const { showToast } = useToast();
@@ -55,10 +55,13 @@ export function HomeView({ onArtistClick }: { onArtistClick?: (artist: Artist) =
   }, [loadTrending]);
 
   const handlePlay = useCallback((song: Song) => {
-    addSong(song);
+    // Load all currently visible trending songs as the queue so next/prev works
+    const queue = trending.length > 0 ? trending : [song];
+    const startIndex = Math.max(0, queue.findIndex(s => s.youtubeId === song.youtubeId));
+    loadQueue(queue, startIndex);
     loadAndPlay(song);
     showToast(`Playing: ${song.title.slice(0, 28)}`);
-  }, [addSong, loadAndPlay, showToast]);
+  }, [trending, loadQueue, loadAndPlay, showToast]);
 
   const handleLike = useCallback((song: Song) => {
     const liked = useLibraryStore.getState().toggleLike(song);
