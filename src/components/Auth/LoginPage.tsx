@@ -316,7 +316,7 @@ export function LoginPage() {
           <div style={S.hero} className="sw-hero">
             <div style={S.badge}><div style={S.badgeDot}/> Now streaming millions of tracks</div>
             <h1 style={S.h1}>Your music,<br/><span style={S.accent}>everywhere.</span></h1>
-            <p style={S.sub}>Discover trending songs, build playlists, and enjoy music powered by YouTube — all in one beautiful interface.</p>
+            <p style={S.sub}>Discover trending songs, build playlists, and enjoy music powered by YouTube all in one beautiful interface.</p>
             <div style={S.statsRow} className="sw-stats">
               {[['∞','Songs'],['100%','Free'],['HD','Quality']].map(([n,l]) => (
                 <div key={l}><span style={S.statN}>{n}</span><span style={S.statL}>{l}</span></div>
