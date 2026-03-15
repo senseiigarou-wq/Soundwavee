@@ -1,5 +1,5 @@
 import { SoundwaveIcon } from "@/components/common/Soundwavelogo";
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search as SearchIcon, X, Loader, ListPlus } from 'lucide-react';
 import { YouTubeService } from '@/services/youtube';
 import { usePlayerStore } from '@/store/playStore';
@@ -19,7 +19,7 @@ const BROWSE = [
   { label: 'OPM', emoji: '🇵🇭', from: '#0d1a2a', to: '#061018' },
 ];
 
-export function SearchView() {
+export function SearchView({ onArtistClick }: { onArtistClick?: (artist: import('@/types').Artist) => void }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Song[]>([]);
   const [recommended, setRecommended] = useState<Song[]>([]);
