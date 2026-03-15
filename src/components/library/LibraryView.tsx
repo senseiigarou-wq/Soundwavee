@@ -17,7 +17,7 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
   const [newName, setNewName] = useState('');
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
 
-  const { playlists, likedSongs, recentSongs, followedArtists, createPlaylist, deletePlaylist, removeFromPlaylist, removeFromRecent, clearHistory, unfollowArtist } = useLibraryStore();
+  const { playlists, likedSongs, recentSongs, followedArtists, createPlaylist, deletePlaylist, removeFromPlaylist, removeFromRecent, clearHistory, unfollowArtist, loadQueue } = useLibraryStore();
   const { currentSong, isPlaying, setPendingPlaylist } = usePlayerStore();
   const { loadAndPlay } = useYouTubePlayer();
   const { showToast } = useToast();
@@ -40,8 +40,17 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
     else showToast('Name already exists', 'warning');
   };
 
-  const handlePlaySong = (song: Song) => {
-    useLibraryStore.getState().addSong(song);
+  // Plays a song AND loads the correct surrounding queue so next/prev work.
+  // The queue source depends on which tab/playlist is active.
+  const handlePlaySong = (song: Song, queueOverride?: Song[]) => {
+    const queue = queueOverride
+      ?? (selectedPlaylist ? (playlists.find(p => p.id === selectedPlaylist.id)?.songs ?? [song])
+        : activeTab === 'liked'   ? likedSongs
+        : activeTab === 'history' ? recentSongs
+        : [song]);
+
+    const startIndex = Math.max(0, queue.findIndex(s => s.youtubeId === song.youtubeId));
+    loadQueue(queue, startIndex);
     loadAndPlay(song);
     showToast(`Playing: ${song.title.slice(0, 28)}`);
   };
@@ -80,7 +89,7 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
             <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{pl.songs.length} song{pl.songs.length !== 1 ? 's' : ''}</p>
             <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
               {pl.songs.length > 0 && (
-                <button onClick={() => handlePlaySong(pl.songs[0])}
+                <button onClick={() => handlePlaySong(pl.songs[0], pl.songs)}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 999, background: 'var(--pink)', color: '#fff', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 16px rgba(255,107,157,0.35)', transition: 'all 0.2s', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   <Play size={16} fill="white" /> Play All
