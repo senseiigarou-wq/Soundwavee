@@ -3,13 +3,14 @@
 // Typed wrapper around localStorage with error handling.
 // ============================================================
 
-import type { Song, Playlist } from '@/types';
+import type { Song, Playlist, Artist } from '@/types';
 
 const KEYS = {
   LIBRARY: 'sw_library',
   PLAYLISTS: 'sw_playlists',
   LIKED: 'sw_liked_songs',
   RECENT: 'sw_recent',
+  FOLLOWED: 'sw_followed_artists',
   USER: 'sw_user',
   TRENDING_PREFIX: 'sw_trending_',
 } as const;
@@ -78,8 +79,11 @@ export const StorageService = {
     safeSet(KEYS.TRENDING_PREFIX + genre, { data: songs, timestamp: Date.now(), ttl });
   },
 
-  removeFromRecent(youtubeId: string): void {
-    const updated = this.getRecentSongs().filter(s => s.youtubeId !== youtubeId);
+  // ─── Followed Artists ─────────────────────────────────────
+  getFollowedArtists: (): Artist[] => safeGet<Artist[]>(KEYS.FOLLOWED, []),
+  saveFollowedArtists(artists: Artist[]): void { safeSet(KEYS.FOLLOWED, artists); },
+
+  removeFromRecent(youtubeId: string): void {    const updated = this.getRecentSongs().filter(s => s.youtubeId !== youtubeId);
     safeSet(KEYS.RECENT, updated);
   },
 
