@@ -1207,7 +1207,11 @@ input[type="range"].volume { width: 80px; }
   .genre-tabs::-webkit-scrollbar { display: none; }
 
   /* Search bar full width */
-  .search-bar-wrap { padding: 0; }
+  .search-bar-wrap {
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+  }
 
   /* Home page title */
   .page-title    { font-size: 22px !important; letter-spacing: -0.4px !important; }
