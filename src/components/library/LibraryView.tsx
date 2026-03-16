@@ -142,7 +142,7 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingTop: 'max(8px, env(safe-area-inset-top))' }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px' }}>Your Library</h1>
         <button
           onClick={() => setShowCreateForm(v => !v)}
