@@ -238,6 +238,8 @@ img { display: block; max-width: 100%; }
   z-index: 20;
   background: linear-gradient(to bottom, var(--bg) 60%, transparent);
   padding: 20px 0 4px;
+  /* Clear iOS notch / status bar */
+  padding-top: max(28px, calc(env(safe-area-inset-top) + 16px));
   margin-bottom: 8px;
 }
 .page-title {
