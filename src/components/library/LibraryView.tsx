@@ -1,6 +1,7 @@
 import { SoundwaveIcon } from "@/components/common/Soundwavelogo";
 import React, { useState } from 'react';
 import { Plus, Trash2, Play, Music, X, ListPlus } from 'lucide-react';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useLibraryStore } from '@/store/libraryStore';
 import { usePlayerStore } from '@/store/playStore';
 import { useYouTubePlayer } from '@/hooks/useYoutubePlayer';
@@ -16,13 +17,22 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   const { playlists, likedSongs, recentSongs, followedArtists, createPlaylist, deletePlaylist, removeFromPlaylist, removeFromRecent, clearHistory, unfollowArtist, loadQueue } = useLibraryStore();
   const { currentSong, isPlaying, setPendingPlaylist } = usePlayerStore();
   const { loadAndPlay } = useYouTubePlayer();
   const { showToast } = useToast();
 
-  // Unified remove helper — '__clear__' sentinel triggers clearHistory
+  const openConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ isOpen: true, title, message, onConfirm });
+  };
+  const closeConfirm = () => setConfirmDialog(d => ({ ...d, isOpen: false }));
   const removeFromRecentStore = (youtubeId: string) => {
     if (youtubeId === '__clear__') {
       clearHistory();
@@ -199,7 +209,7 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
                     <div className="playlist-card-count">{pl.songs.length} songs</div>
                   </div>
                   <button className="playlist-card-del" style={{ opacity: 0, transition: 'opacity 0.2s' }}
-                    onClick={e => { e.stopPropagation(); deletePlaylist(pl.id); showToast('Playlist deleted'); }}
+                    onClick={e => { e.stopPropagation(); openConfirm('Delete Playlist', `Delete "${pl.name}"? All songs in this playlist will be removed.`, () => { deletePlaylist(pl.id); showToast('Playlist deleted'); closeConfirm(); }); }}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -230,7 +240,7 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 4px 12px', marginBottom: 4 }}>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{recentSongs.length} song{recentSongs.length !== 1 ? 's' : ''}</span>
                 <button
-                  onClick={() => { if (confirm('Clear all history?')) removeFromRecentStore('__clear__'); }}
+                  onClick={() => openConfirm('Clear History', 'This will permanently remove all songs from your history. This cannot be undone.', () => { removeFromRecentStore('__clear__'); closeConfirm(); })}
                   style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, transition: 'all 0.2s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ff6b6b'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,100,100,0.3)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.1)'; }}
@@ -298,6 +308,19 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
               </div>
             </div>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        danger={true}
+        icon={<Trash2 size={24} />}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   );
 }
