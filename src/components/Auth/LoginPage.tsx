@@ -8,6 +8,7 @@ import { getLockoutRemaining, getProgressiveDelay, isInIframe, validatePassword 
 import { useToast } from '@/components/common/Toast';
 import { ENV } from '@/config/env';
 import { SoundwaveLogo } from '@/components/common/Soundwavelogo';
+import { PrivacyPolicyPage } from '@/components/Legal/PrivacyPolicyPage';
 
 // ─── Types ───────────────────────────────────────────────────
 type AuthMode = 'signin' | 'signup' | 'reset';
@@ -208,6 +209,7 @@ input:-webkit-autofill{-webkit-box-shadow:0 0 0 30px #1a1a1a inset!important;-we
 export function LoginPage() {
   const { loginGoogle, loginEmail, registerEmail, sendPasswordReset, isLoading, error, clearError } = useAuthStore();
   const { showToast } = useToast();
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   // (scroll handled by .sw-page container — no body class needed)
 
@@ -328,7 +330,12 @@ export function LoginPage() {
               ))}
             </div>
           </div>
-          <p style={S.footer}>© 2026 Soundwave · Built by Soundwave Team</p>
+          <p style={S.footer}>
+            © 2026 Soundwave · Built by Soundwave Team ·{' '}
+            <button onClick={() => setShowPrivacy(true)} style={{ background: 'none', border: 'none', color: 'var(--pink)', cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit', padding: 0, textDecoration: 'underline' }}>
+              Privacy Policy
+            </button>
+          </p>
         </div>
 
         <div className="sw-divider" style={S.divider}/>
@@ -543,6 +550,13 @@ export function LoginPage() {
           </div>
         </div>
       </div>
+
+      {/* Privacy Policy overlay */}
+      {showPrivacy && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999, overflowY: 'auto', background: '#000' }}>
+          <PrivacyPolicyPage onBack={() => setShowPrivacy(false)} />
+        </div>
+      )}
     </>
   );
 }
