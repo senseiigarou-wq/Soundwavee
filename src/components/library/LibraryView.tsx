@@ -2,6 +2,7 @@ import { SoundwaveIcon } from "@/components/common/Soundwavelogo";
 import React, { useState } from 'react';
 import { Plus, Trash2, Play, Music, X, ListPlus } from 'lucide-react';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { AdBanner } from '@/components/common/AdBanner';
 import { useLibraryStore } from '@/store/libraryStore';
 import { usePlayerStore } from '@/store/playStore';
 import { useYouTubePlayer } from '@/hooks/useYoutubePlayer';
@@ -183,6 +184,12 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
           </button>
         ))}
       </div>
+
+      {/* Ad — shown once per library visit, non-intrusive */}
+      <AdBanner
+        slot={import.meta.env.VITE_ADSENSE_SLOT_LIBRARY ?? ''}
+        style={{ margin: '12px 0 16px' }}
+      />
 
       {/* Playlists */}
       {activeTab === 'playlists' && (
