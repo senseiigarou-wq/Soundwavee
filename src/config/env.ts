@@ -17,6 +17,9 @@ export const ENV = {
   // Direct YouTube API key (only used if WORKER_URL is not set)
   YOUTUBE_API_KEY: getEnv('VITE_YOUTUBE_API_KEY'),
 
+  // Google AdSense publisher ID e.g. ca-pub-1234567890123456
+  ADSENSE_PUB_ID: getEnv('VITE_ADSENSE_PUB_ID', ''),
+
   FIREBASE_API_KEY:             getEnv('VITE_FIREBASE_API_KEY'),
   FIREBASE_AUTH_DOMAIN:         getEnv('VITE_FIREBASE_AUTH_DOMAIN'),
   FIREBASE_PROJECT_ID:          getEnv('VITE_FIREBASE_PROJECT_ID'),
