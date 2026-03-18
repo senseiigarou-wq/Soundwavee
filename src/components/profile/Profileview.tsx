@@ -10,8 +10,9 @@ import { EditProfileView } from './Editprofileview';
 import { NotificationsView } from './Notificationsview';
 import { AppearanceView } from './Appearanceview';
 import { PrivacySecurityView } from './Privacysecurityview';
+import { PrivacyPolicyPage } from '@/components/Legal/PrivacyPolicyPage';
 
-type Screen = 'main' | 'edit-profile' | 'notifications' | 'appearance' | 'privacy';
+type Screen = 'main' | 'edit-profile' | 'notifications' | 'appearance' | 'privacy' | 'privacy-policy';
 
 interface ProfileViewProps {
   initialScreen?: string;
@@ -36,6 +37,7 @@ export function ProfileView({ initialScreen, onScreenClear }: ProfileViewProps) 
   if (screen === 'notifications') return <NotificationsView onBack={() => setScreen('main')} />;
   if (screen === 'appearance')    return <AppearanceView onBack={() => setScreen('main')} />;
   if (screen === 'privacy')       return <PrivacySecurityView onBack={() => setScreen('main')} />;
+  if (screen === 'privacy-policy') return <PrivacyPolicyPage onBack={() => setScreen('main')} />;
 
   // ── Main profile screen ──────────────────────────────────
   const handleLogout = async () => {
@@ -64,6 +66,10 @@ export function ProfileView({ initialScreen, onScreenClear }: ProfileViewProps) 
     { icon: Bell,    label: 'Notifications',      sub: 'Manage alerts',  action: () => setScreen('notifications') },
     { icon: Palette, label: 'Appearance',         sub: 'Theme, display', action: () => setScreen('appearance') },
     { icon: Shield,  label: 'Privacy & Security', sub: 'Data, account',  action: () => setScreen('privacy') },
+  ];
+
+  const legalItems = [
+    { icon: Shield, label: 'Privacy Policy', sub: 'How we use your data', action: () => setScreen('privacy-policy') },
   ];
 
   return (
@@ -133,6 +139,28 @@ export function ProfileView({ initialScreen, onScreenClear }: ProfileViewProps) 
         </div>
       </div>
 
+      {/* ── Legal ── */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8, paddingLeft: 2 }}>Legal</div>
+        <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+          {legalItems.map(({ icon: Icon, label, sub, action }, i) => (
+            <button key={label} onClick={action} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'none', border: 'none', borderBottom: i < legalItems.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'background 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,107,157,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon size={17} color="var(--pink)" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{sub}</div>
+              </div>
+              <ChevronRight size={16} color="var(--text-muted)" />
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── Sign out ── */}
       {!showConfirm ? (
         <button onClick={() => setShowConfirm(true)} style={{
@@ -160,7 +188,10 @@ export function ProfileView({ initialScreen, onScreenClear }: ProfileViewProps) 
       )}
 
       <div style={{ textAlign: 'center', marginTop: 28, color: 'var(--text-muted)', fontSize: 11 }}>
-        Soundwave v1.0 · Secured by Firebase
+        Soundwave v1.0 · Secured by Firebase ·{' '}
+        <button onClick={() => setScreen('privacy-policy')} style={{ background: 'none', border: 'none', color: 'var(--pink)', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit', padding: 0 }}>
+          Privacy Policy
+        </button>
       </div>
       <style>{`@keyframes sw-spin{to{transform:rotate(360deg)}}`}</style>
     </div>
