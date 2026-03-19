@@ -9,8 +9,9 @@ interface AdBannerProps {
   style?: React.CSSProperties;
 }
 
-// Publisher ID — falls back to the hardcoded one if env var not set
-const PUB_ID = import.meta.env.VITE_ADSENSE_PUB_ID || 'ca-pub-9263325326966562';
+// Publisher ID and default slot
+const PUB_ID      = import.meta.env.VITE_ADSENSE_PUB_ID  || 'ca-pub-9263325326966562';
+const DEFAULT_SLOT = import.meta.env.VITE_ADSENSE_SLOT_LIBRARY || '6203471608';
 const IS_PROD = import.meta.env.PROD; // true only on npm run build
 
 declare global {
@@ -18,13 +19,12 @@ declare global {
 }
 
 export function AdBanner({ slot, style }: AdBannerProps) {
+  const adSlot = slot || DEFAULT_SLOT;
   const ref = useRef<HTMLModElement>(null);
   const pushed = useRef(false);
 
   useEffect(() => {
-    // Never show ads in dev / Bolt.new / StackBlitz
     if (!IS_PROD || !PUB_ID || pushed.current) return;
-
     try {
       window.adsbygoogle = window.adsbygoogle || [];
       window.adsbygoogle.push({});
@@ -34,7 +34,6 @@ export function AdBanner({ slot, style }: AdBannerProps) {
     }
   }, []);
 
-  // Don't render at all in dev or if publisher ID is missing
   if (!IS_PROD || !PUB_ID) return null;
 
   return (
@@ -42,17 +41,15 @@ export function AdBanner({ slot, style }: AdBannerProps) {
       width: '100%',
       overflow: 'hidden',
       borderRadius: 12,
-      background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      minHeight: 100,
+      minHeight: 90,
       ...style,
     }}>
       <ins
         ref={ref}
         className="adsbygoogle"
-        style={{ display: 'block' }}
+        style={{ display: 'block', width: '100%' }}
         data-ad-client={PUB_ID}
-        data-ad-slot={slot}
+        data-ad-slot={adSlot}
         data-ad-format="auto"
         data-full-width-responsive="true"
       />
