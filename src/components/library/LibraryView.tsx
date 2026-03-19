@@ -187,7 +187,7 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
 
       {/* Ad — shown once per library visit, non-intrusive */}
       <AdBanner
-        slot={import.meta.env.VITE_ADSENSE_SLOT_LIBRARY ?? ''}
+        slot="6203471608"
         style={{ margin: '12px 0 16px' }}
       />
 
