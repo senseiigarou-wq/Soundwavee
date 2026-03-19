@@ -1,8 +1,8 @@
 // ============================================================
 // SOUNDWAVE — Profile View (mobile)
 // ============================================================
-import React, { useState } from 'react';
-import { LogOut, Music, Heart, List, User, ChevronRight, Shield, Bell, Palette } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LogOut, Music, Heart, List, User, ChevronRight, Shield, Bell, Palette, ZoomIn, X } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useToast } from '@/components/common/Toast';
@@ -11,6 +11,36 @@ import { NotificationsView } from './Notificationsview';
 import { AppearanceView } from './Appearanceview';
 import { PrivacySecurityView } from './Privacysecurityview';
 import { PrivacyPolicyPage } from '@/components/Legal/PrivacyPolicyPage';
+
+// ── Inline Avatar Viewer ───────────────────────────────────
+function AvatarViewer({ src, name, onClose }: { src: string; name: string; onClose: () => void }) {
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onClose]);
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(12px)', animation: 'av-fade 0.2s ease', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+        <div style={{ position: 'relative', animation: 'av-pop 0.3s cubic-bezier(0.16,1,0.3,1)' }} onClick={e => e.stopPropagation()}>
+          <div style={{ width: 240, height: 240, borderRadius: '50%', overflow: 'hidden', border: '4px solid rgba(255,107,157,0.6)', boxShadow: '0 0 60px rgba(255,107,157,0.4)', background: '#1a1a2a' }}>
+            <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          <div style={{ position: 'absolute', inset: -8, borderRadius: '50%', border: '2px solid rgba(255,107,157,0.3)', animation: 'av-ring 2s ease-in-out infinite' }} />
+        </div>
+        <div style={{ color: '#fff', fontSize: 18, fontWeight: 700 }}>{name}</div>
+        <button onClick={onClose} style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <X size={20} />
+        </button>
+      </div>
+      <style>{`
+        @keyframes av-fade { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes av-pop  { from { transform: scale(0.5); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+        @keyframes av-ring { 0%,100% { transform: scale(1); opacity: 0.5 } 50% { transform: scale(1.08); opacity: 1 } }
+      `}</style>
+    </>
+  );
+}
 
 type Screen = 'main' | 'edit-profile' | 'notifications' | 'appearance' | 'privacy' | 'privacy-policy';
 
@@ -28,7 +58,7 @@ export function ProfileView({ initialScreen, onScreenClear }: ProfileViewProps) 
   const [screen, setScreen] = useState<Screen>((initialScreen as Screen) ?? 'main');
 
   // If parent updates initialScreen (desktop nav), sync to it
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialScreen) { setScreen(initialScreen as Screen); onScreenClear?.(); }
   }, [initialScreen]);
 
@@ -50,7 +80,8 @@ export function ProfileView({ initialScreen, onScreenClear }: ProfileViewProps) 
     }
   };
 
-  const avatar = user?.picture;
+  const [showAvatarViewer, setShowAvatarViewer] = useState(false);
+  const avatar  = user?.picture;
   const initials = user?.name
     ? user.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
     : 'U';
@@ -81,19 +112,43 @@ export function ProfileView({ initialScreen, onScreenClear }: ProfileViewProps) 
         borderRadius: 20, padding: '32px 20px 24px', marginBottom: 20,
         textAlign: 'center', border: '1px solid rgba(255,107,157,0.1)',
       }}>
-        <div style={{
-          width: 80, height: 80, borderRadius: '50%', margin: '0 auto 14px',
-          border: '3px solid rgba(255,107,157,0.5)', overflow: 'hidden',
-          background: 'linear-gradient(135deg, #FF6B9D, #E05587)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 28, fontWeight: 800, color: '#fff',
-          boxShadow: '0 0 24px rgba(255,107,157,0.3)',
-          cursor: 'pointer',
-        }} onClick={() => setScreen('edit-profile')}>
-          {avatar
-            ? <img src={avatar} alt={user?.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : initials}
+        <div style={{ position: 'relative', width: 80, height: 80, margin: '0 auto 14px' }}>
+          {/* Animated ring when has avatar */}
+          {avatar && (
+            <div style={{ position: 'absolute', inset: -4, borderRadius: '50%', background: 'conic-gradient(from 0deg, #FF6B9D, #7ed0ec, #FF6B9D)', animation: 'pv-spin 4s linear infinite', opacity: 0.7 }} />
+          )}
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%',
+            border: '3px solid #000',
+            overflow: 'hidden',
+            background: 'linear-gradient(135deg, #FF6B9D, #E05587)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 28, fontWeight: 800, color: '#fff',
+            cursor: avatar ? 'pointer' : 'default',
+            position: 'relative', zIndex: 1,
+            transition: 'transform 0.2s',
+          }}
+            onClick={() => avatar ? setShowAvatarViewer(true) : setScreen('edit-profile')}
+            onMouseEnter={e => { if (avatar) (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.05)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; }}
+          >
+            {avatar
+              ? <img src={avatar} alt={user?.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : initials}
+            {avatar && (
+              <div className="pv-view-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', transition: 'background 0.2s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.45)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0)'; }}
+              >
+                <ZoomIn size={20} color="#fff" style={{ opacity: 0, transition: 'opacity 0.2s' }} />
+              </div>
+            )}
+          </div>
         </div>
+        <style>{`
+          @keyframes pv-spin { to { transform: rotate(360deg); } }
+          .pv-view-overlay:hover svg { opacity: 1 !important; }
+        `}</style>
         <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', marginBottom: 4 }}>
           {user?.name ?? 'User'}
         </div>
@@ -194,6 +249,11 @@ export function ProfileView({ initialScreen, onScreenClear }: ProfileViewProps) 
         </button>
       </div>
       <style>{`@keyframes sw-spin{to{transform:rotate(360deg)}}`}</style>
+
+      {/* Avatar full-screen viewer */}
+      {showAvatarViewer && avatar && (
+        <AvatarViewer src={avatar} name={user?.name ?? 'Profile Photo'} onClose={() => setShowAvatarViewer(false)} />
+      )}
     </div>
   );
 }
