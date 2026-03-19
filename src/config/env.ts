@@ -2,30 +2,35 @@
 // SOUNDWAVE — Environment Configuration
 // ============================================================
 
-function getEnv(key: string, fallback = ''): string {
+// Required keys — warn only in dev if missing
+function getEnv(key: string, fallback = '', required = false): string {
   const v = import.meta.env[key];
-  if (!v) { if (!fallback) console.warn(`[Config] Missing: ${key}`); return fallback; }
+  if (!v) {
+    if (required && import.meta.env.DEV) {
+      console.warn(`[Config] Missing required env var: ${key}`);
+    }
+    return fallback;
+  }
   return String(v);
 }
 
 export const ENV = {
   // ── YouTube proxy worker URL ──────────────────────────────
-  // Set VITE_WORKER_URL to your deployed Cloudflare Worker URL.
-  // e.g. https://soundwave-worker.your-subdomain.workers.dev
-  WORKER_URL: getEnv('VITE_WORKER_URL', ''),
+  WORKER_URL:      getEnv('VITE_WORKER_URL', ''),
 
   // Direct YouTube API key (only used if WORKER_URL is not set)
-  YOUTUBE_API_KEY: getEnv('VITE_YOUTUBE_API_KEY'),
+  YOUTUBE_API_KEY: getEnv('VITE_YOUTUBE_API_KEY', ''),
 
-  // Google AdSense publisher ID e.g. ca-pub-1234567890123456
-  ADSENSE_PUB_ID: getEnv('VITE_ADSENSE_PUB_ID', ''),
+  // Google AdSense publisher ID
+  ADSENSE_PUB_ID:  getEnv('VITE_ADSENSE_PUB_ID', ''),
 
-  FIREBASE_API_KEY:             getEnv('VITE_FIREBASE_API_KEY'),
-  FIREBASE_AUTH_DOMAIN:         getEnv('VITE_FIREBASE_AUTH_DOMAIN'),
-  FIREBASE_PROJECT_ID:          getEnv('VITE_FIREBASE_PROJECT_ID'),
-  FIREBASE_STORAGE_BUCKET:      getEnv('VITE_FIREBASE_STORAGE_BUCKET'),
-  FIREBASE_MESSAGING_SENDER_ID: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
-  FIREBASE_APP_ID:              getEnv('VITE_FIREBASE_APP_ID'),
+  // Firebase — required for auth
+  FIREBASE_API_KEY:             getEnv('VITE_FIREBASE_API_KEY',             '', true),
+  FIREBASE_AUTH_DOMAIN:         getEnv('VITE_FIREBASE_AUTH_DOMAIN',         '', true),
+  FIREBASE_PROJECT_ID:          getEnv('VITE_FIREBASE_PROJECT_ID',          '', true),
+  FIREBASE_STORAGE_BUCKET:      getEnv('VITE_FIREBASE_STORAGE_BUCKET',      '', true),
+  FIREBASE_MESSAGING_SENDER_ID: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID', '', true),
+  FIREBASE_APP_ID:              getEnv('VITE_FIREBASE_APP_ID',              '', true),
 
   APP_NAME: getEnv('VITE_APP_NAME', 'Soundwave'),
   APP_URL:  getEnv('VITE_APP_URL',  'http://localhost:5173'),
