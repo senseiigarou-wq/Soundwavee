@@ -56,6 +56,7 @@ export function ProfileView({ initialScreen, onScreenClear }: ProfileViewProps) 
   const [loggingOut, setLoggingOut] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [screen, setScreen] = useState<Screen>((initialScreen as Screen) ?? 'main');
+  const [showAvatarViewer, setShowAvatarViewer] = useState(false);
 
   // If parent updates initialScreen (desktop nav), sync to it
   useEffect(() => {
@@ -80,7 +81,6 @@ export function ProfileView({ initialScreen, onScreenClear }: ProfileViewProps) 
     }
   };
 
-  const [showAvatarViewer, setShowAvatarViewer] = useState(false);
   const avatar  = user?.picture;
   const initials = user?.name
     ? user.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
