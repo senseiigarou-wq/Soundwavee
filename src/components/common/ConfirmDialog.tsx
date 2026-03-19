@@ -26,12 +26,19 @@ export function ConfirmDialog({
 
   const cancelRef = useRef<HTMLButtonElement>(null);
 
+  // Lock body scroll when open, restore when closed
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
   // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
     window.addEventListener('keydown', handler);
-    // Auto-focus cancel button (safe default)
     setTimeout(() => cancelRef.current?.focus(), 50);
     return () => window.removeEventListener('keydown', handler);
   }, [isOpen, onCancel]);
