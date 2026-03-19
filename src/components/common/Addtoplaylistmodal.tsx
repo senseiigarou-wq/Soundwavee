@@ -28,6 +28,14 @@ export function AddToPlaylistModal() {
     if (creating) setTimeout(() => inputRef.current?.focus(), 50);
   }, [creating]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (!song) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [song]);
+
   // Close on Escape
   useEffect(() => {
     if (!song) return;
