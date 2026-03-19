@@ -11,10 +11,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tsconfigPaths(),
-      // ── PWA only runs during `npm run build` ────────────────
-      // In dev (StackBlitz/Bolt.new) the sandbox has near-zero
-      // cache storage quota — workbox throws QuotaExceededError.
-      // Completely excluding the plugin in dev mode fixes this.
       ...(isProd ? [
         VitePWA({
           registerType: 'autoUpdate',
@@ -78,7 +74,7 @@ export default defineConfig(({ mode }) => {
                 options: { cacheName: 'firebase', networkTimeoutSeconds: 10 },
               },
             ],
-            navigateFallbackDenylist: [/^\/(__\/auth|api)\//],
+            navigateFallbackDenylist: [/^\/(__\/auth|api)\//, /^\/ads\.txt$/, /^\/robots\.txt$/, /^\/site\.webmanifest$/],
           },
         }),
       ] : []),
@@ -92,7 +88,8 @@ export default defineConfig(({ mode }) => {
       postcss: './tailwind.config.js',
     },
     build: {
-      // Content-hashed filenames — browser always fetches latest JS/CSS after deploy
+      // Content-hashed filenames — browsers always fetch the latest
+      // JS/CSS after a deploy without needing a manual cache clear.
       rollupOptions: {
         output: {
           entryFileNames: 'assets/[name]-[hash].js',
@@ -100,6 +97,7 @@ export default defineConfig(({ mode }) => {
           assetFileNames: 'assets/[name]-[hash][extname]',
         },
       },
+      // Suppress large-chunk warnings (Firebase + React = big bundles)
       chunkSizeWarningLimit: 1000,
     },
   };
