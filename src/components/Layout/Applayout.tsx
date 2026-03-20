@@ -6,11 +6,12 @@ import { FullPlayer } from '@/components/player/Fullplayer';
 import { AddToPlaylistModal } from '@/components/common/Addtoplaylistmodal';
 import { HomeView } from '@/components/home/Homeview';
 import { SearchView } from '@/components/search/Searchview';
-import { LibraryView } from '@/components/library/LibraryView';
+import { LibraryView } from '@/components/library/Libraryview';
 import { ProfileView } from '@/components/profile/Profileview';
-import { ArtistView } from '@/components/Artist/ArtistView';
+import { ArtistView } from '@/components/artist/Artistview';
+import { SeeAllView } from '@/components/home/SeeAllView';
 import { SidebarProfilePanel } from '@/components/profile/Sidebarprofilepanel';
-import type { View, Artist } from '@/types';
+import type { View, Artist, Genre } from '@/types';
 
 type ProfileScreen = 'edit-profile' | 'notifications' | 'appearance' | 'privacy' | null;
 
@@ -24,6 +25,7 @@ export function AppLayout() {
   const [desktopProfile, setDesktopProfile] = useState<ProfileScreen>(null);
   const [currentArtist, setCurrentArtist]   = useState<Artist | null>(null);
   const [artistHistory, setArtistHistory]   = useState<Artist[]>([]);
+  const [seeAll, setSeeAll]                 = useState<{ genre: Genre; label: string } | null>(null);
 
   const handleDesktopNavigate = (screen: NonNullable<ProfileScreen>) => {
     setDesktopProfile(screen);
@@ -55,7 +57,9 @@ export function AppLayout() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'home':    return <HomeView onArtistClick={(a: Artist) => navigateToArtist(a, 'home')} />;
+      case 'home':
+        if (seeAll) return <SeeAllView genre={seeAll.genre} genreLabel={seeAll.label} onBack={() => setSeeAll(null)} />;
+        return <HomeView onArtistClick={(a: Artist) => navigateToArtist(a, 'home')} onSeeAll={(g, l) => setSeeAll({ genre: g, label: l })} />;
       case 'search':  return <SearchView onArtistClick={(a: Artist) => navigateToArtist(a, 'search')} />;
       case 'library': return <LibraryView onNavigate={setCurrentView} onArtistClick={(a: Artist) => navigateToArtist(a, 'library')} />;
       case 'liked':   return <LibraryView onNavigate={setCurrentView} onArtistClick={(a: Artist) => navigateToArtist(a, 'liked')} />;
@@ -77,7 +81,7 @@ export function AppLayout() {
       <YouTubeContainer />
       <Sidebar
         currentView={currentView}
-        onViewChange={(v: View) => { setCurrentArtist(null); setArtistHistory([]); setCurrentView(v); }}
+        onViewChange={(v: View) => { setCurrentArtist(null); setArtistHistory([]); setSeeAll(null); setCurrentView(v); }}
         onUserClick={() => setPanelOpen(v => !v)}
       />
       {panelOpen && (
@@ -97,7 +101,7 @@ export function AppLayout() {
       <MobilePlayer />
       <BottomNav
         currentView={currentView}
-        onViewChange={(v: View) => { setCurrentArtist(null); setArtistHistory([]); setCurrentView(v); }}
+        onViewChange={(v: View) => { setCurrentArtist(null); setArtistHistory([]); setSeeAll(null); setCurrentView(v); }}
       />
       <FullPlayer />
       <AddToPlaylistModal />
