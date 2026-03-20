@@ -6,6 +6,7 @@ import { useLibraryStore } from '@/store/libraryStore';
 import { useYouTubePlayer } from '@/hooks/useYoutubePlayer';
 import { useToast } from '@/components/common/Toast';
 import { SongCard } from '@/components/common/Songcard';
+import { AdBanner } from '@/components/common/AdBanner';
 import type { Song, Artist, Genre } from '@/types';
 
 const GENRES: { id: Genre; label: string; emoji: string }[] = [
@@ -176,6 +177,8 @@ export function HomeView({ onArtistClick }: { onArtistClick?: (artist: Artist) =
       {/* Recently Played */}
       {recentSongs.length > 0 && (
         <section style={{ marginBottom: 40 }}>
+          {/* Ad placed naturally in scroll flow — won't block interaction */}
+          <AdBanner slot="6203471608" style={{ marginBottom: 32 }} />
           <div className="section-header">
             <h2 className="section-title">Recently Played</h2>
           </div>
