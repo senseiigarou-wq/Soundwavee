@@ -174,11 +174,12 @@ export function HomeView({ onArtistClick }: { onArtistClick?: (artist: Artist) =
         </section>
       )}
 
+      {/* Ad — in normal scroll flow, never inside conditionals */}
+      <AdBanner slot="6203471608" style={{ marginBottom: 32 }} />
+
       {/* Recently Played */}
       {recentSongs.length > 0 && (
         <section style={{ marginBottom: 40 }}>
-          {/* Ad placed naturally in scroll flow — won't block interaction */}
-          <AdBanner slot="6203471608" style={{ marginBottom: 32 }} />
           <div className="section-header">
             <h2 className="section-title">Recently Played</h2>
           </div>
