@@ -28,7 +28,7 @@ function SkeletonCard() {
   );
 }
 
-export function HomeView({ onArtistClick }: { onArtistClick?: (artist: Artist) => void }) {
+export function HomeView({ onArtistClick, onSeeAll }: { onArtistClick?: (artist: Artist) => void; onSeeAll?: (genre: Genre, label: string) => void }) {
   const [trending, setTrending] = useState<Song[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -100,7 +100,11 @@ export function HomeView({ onArtistClick }: { onArtistClick?: (artist: Artist) =
       <section style={{ marginBottom: 40 }}>
         <div className="section-header">
           <h2 className="section-title">Trending Songs</h2>
-          <a href="#" className="section-link">See all <ChevronRight size={14} /></a>
+          <a
+            href="#"
+            className="section-link"
+            onClick={e => { e.preventDefault(); const g = GENRES.find(x => x.id === activeGenre); onSeeAll?.(activeGenre, g?.label ?? 'Songs'); }}
+          >See all <ChevronRight size={14} /></a>
         </div>
         <div className="songs-grid">
           {isLoading
