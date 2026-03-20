@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { RefreshCw, ChevronRight, UserPlus, UserCheck } from 'lucide-react';
 import { YouTubeService } from '@/services/youtube';
 import { usePlayerStore } from '@/store/playStore';
@@ -6,7 +6,6 @@ import { useLibraryStore } from '@/store/libraryStore';
 import { useYouTubePlayer } from '@/hooks/useYoutubePlayer';
 import { useToast } from '@/components/common/Toast';
 import { SongCard } from '@/components/common/Songcard';
-import { AdBanner } from '@/components/common/AdBanner';
 import type { Song, Artist, Genre } from '@/types';
 
 const GENRES: { id: Genre; label: string; emoji: string }[] = [
@@ -175,7 +174,6 @@ export function HomeView({ onArtistClick }: { onArtistClick?: (artist: Artist) =
       )}
 
       {/* Ad — in normal scroll flow, never inside conditionals */}
-      <AdBanner slot="6203471608" style={{ marginBottom: 32 }} />
 
       {/* Recently Played */}
       {recentSongs.length > 0 && (
