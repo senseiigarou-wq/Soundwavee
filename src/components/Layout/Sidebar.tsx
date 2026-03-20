@@ -1,203 +1,134 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { RefreshCw, ChevronRight, UserPlus, UserCheck } from 'lucide-react';
-import { YouTubeService } from '@/services/youtube';
-import { usePlayerStore } from '@/store/playStore';
+import { useState } from 'react';
+import { Home, Search, Library, Heart, Plus, Trash2, Music, Settings, type LucideIcon } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
 import { useLibraryStore } from '@/store/libraryStore';
-import { useYouTubePlayer } from '@/hooks/useYoutubePlayer';
 import { useToast } from '@/components/common/Toast';
-import { SongCard } from '@/components/common/Songcard';
-import { AdBanner } from '@/components/common/AdBanner';
-import type { Song, Artist, Genre } from '@/types';
+import { RateLimiter } from '@/services/ratelimiter';
+import { SoundwaveLogo } from '@/components/common/Soundwavelogo';
+import type { View } from '@/types';
 
-const GENRES: { id: Genre; label: string; emoji: string }[] = [
-  { id: 'all', label: 'All', emoji: '🎼' },
-  { id: 'pop', label: 'Pop', emoji: '🎤' },
-  { id: 'hiphop', label: 'Hip-Hop', emoji: '🎧' },
-  { id: 'rnb', label: 'R&B', emoji: '🎶' },
-  { id: 'phonk', label: 'Phonk', emoji: '⚡' },
-  { id: 'indie', label: 'Indie', emoji: '🌙' },
-  { id: 'opm', label: 'OPM', emoji: '🇵🇭' },
-];
-
-function SkeletonCard() {
-  return (
-    <div className="skeleton-card">
-      <div className="skeleton skeleton-art" />
-      <div className="skeleton skeleton-line-1" />
-      <div className="skeleton skeleton-line-2" />
-    </div>
-  );
+interface SidebarProps {
+  currentView: View;
+  onViewChange: (view: View) => void;
+  onUserClick: () => void;
 }
 
-export function HomeView({ onArtistClick }: { onArtistClick?: (artist: Artist) => void }) {
-  const [trending, setTrending] = useState<Song[]>([]);
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeGenre, setActiveGenre] = useState<Genre>('all');
+const navItems: { view: View; label: string; icon: LucideIcon }[] = [
+  { view: 'home', label: 'Home', icon: Home },
+  { view: 'search', label: 'Search', icon: Search },
+  { view: 'library', label: 'Your Library', icon: Library },
+  { view: 'liked', label: 'Liked Songs', icon: Heart },
+];
 
-  const { currentSong, isPlaying } = usePlayerStore();
-  const { likedSongs, followArtist, unfollowArtist, isFollowing, loadQueue } = useLibraryStore();
-  const recentSongs = useLibraryStore(s => s.recentSongs);
-  const { loadAndPlay } = useYouTubePlayer();
+export function Sidebar({ currentView, onViewChange, onUserClick }: SidebarProps) {
+  const user = useAuthStore(s => s.user);
+  const { playlists, createPlaylist, deletePlaylist } = useLibraryStore();
   const { showToast } = useToast();
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [showInput, setShowInput] = useState(false);
 
-  const loadTrending = useCallback(async (genre: Genre) => {
-    setIsLoading(true);
-    try {
-      const songs = await YouTubeService.getTrending(genre);
-      setTrending(songs);
-    } catch { showToast('Failed to load songs', 'error'); }
-    finally { setIsLoading(false); }
-  }, [showToast]);
-
-  useEffect(() => {
-    loadTrending('all');
-    YouTubeService.getPopularArtists(8).then(setArtists).catch(() => {});
-  }, [loadTrending]);
-
-  const handlePlay = useCallback((song: Song) => {
-    // Load all currently visible trending songs as the queue so next/prev works
-    const queue = trending.length > 0 ? trending : [song];
-    const startIndex = Math.max(0, queue.findIndex(s => s.youtubeId === song.youtubeId));
-    loadQueue(queue, startIndex);
-    loadAndPlay(song);
-    showToast(`Playing: ${song.title.slice(0, 28)}`);
-  }, [trending, loadQueue, loadAndPlay, showToast]);
-
-  const handleLike = useCallback((song: Song) => {
-    const liked = useLibraryStore.getState().toggleLike(song);
-    showToast(liked ? '♥ Added to Liked Songs' : '♡ Removed');
-  }, [showToast]);
+  const handleCreate = () => {
+    const v = RateLimiter.validatePlaylistName(newPlaylistName);
+    if (!v.valid) { showToast(v.error ?? 'Invalid name', 'error'); return; }
+    const ok = createPlaylist(newPlaylistName.trim());
+    if (ok) { showToast('Playlist created! 🎧', 'success'); setNewPlaylistName(''); setShowInput(false); }
+    else showToast('Name already exists', 'warning');
+  };
 
   return (
-    <div>
-      {/* Header */}
-      <div className="page-header">
-        <h1 className="page-title">Good vibes 🎧</h1>
-        <p className="page-subtitle">Discover what's trending right now</p>
+    <aside className="app-sidebar">
+      {/* Logo */}
+      <div className="sidebar-logo">
+        <div className="sidebar-logo-icon"><SoundwaveLogo size={30} withBackground={true} /></div>
+        <span className="sidebar-logo-name">Soundwave</span>
       </div>
 
-      {/* Genre tabs */}
-      <div className="genre-tabs" style={{ marginBottom: 24 }}>
-        {GENRES.map(g => (
+      {/* Nav */}
+      <nav className="sidebar-nav">
+        {navItems.map(({ view, label, icon: Icon }) => (
           <button
-            key={g.id}
-            className={`genre-tab${activeGenre === g.id ? ' active' : ''}`}
-            onClick={() => { setActiveGenre(g.id); loadTrending(g.id); }}
+            key={view}
+            className={`nav-item${currentView === view ? ' active' : ''}`}
+            onClick={() => onViewChange(view)}
+            title={label}
           >
-            {g.emoji} {g.label}
+            <Icon size={18} />
+            <span>{label}</span>
           </button>
         ))}
-        <button
-          className="genre-tab refresh"
-          onClick={() => loadTrending(activeGenre)}
-          title="Refresh"
-        >
-          <RefreshCw size={14} />
+      </nav>
+
+      {/* Playlists */}
+      <div className="sidebar-section-label">
+        <span>Playlists</span>
+        <button onClick={() => setShowInput(v => !v)} title="Create playlist">
+          <Plus size={14} />
         </button>
       </div>
 
-      {/* Trending */}
-      <section style={{ marginBottom: 40 }}>
-        <div className="section-header">
-          <h2 className="section-title">Trending Songs</h2>
-          <a href="#" className="section-link">See all <ChevronRight size={14} /></a>
-        </div>
-        <div className="songs-grid">
-          {isLoading
-            ? Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)
-            : trending.slice(0, 12).map(song => (
-              <SongCard
-                key={song.youtubeId}
-                song={song}
-                isActive={currentSong?.youtubeId === song.youtubeId}
-                isPlaying={isPlaying && currentSong?.youtubeId === song.youtubeId}
-                isLiked={likedSongs.some(s => s.youtubeId === song.youtubeId)}
-                onPlay={handlePlay}
-                onLike={handleLike}
-              />
-            ))
-          }
-        </div>
-      </section>
-
-      {/* Popular Artists */}
-      {artists.length > 0 && (
-        <section style={{ marginBottom: 40 }}>
-          <div className="section-header">
-            <h2 className="section-title">Popular Artists</h2>
-          </div>
-          <div className="artists-grid">
-            {artists.slice(0, 8).map(artist => {
-              const following = isFollowing(artist.name);
-              return (
-                <div key={artist.name} className="artist-card" style={{ cursor: 'default' }}>
-                  <div className="artist-avatar" style={{ cursor: 'pointer' }} onClick={() => onArtistClick ? onArtistClick(artist) : showToast(`Searching for ${artist.name}`)}>
-                    {artist.thumbnail
-                      ? <img src={artist.thumbnail} alt={artist.name} />
-                      : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, background: '#1a1a1a' }}>🎤</div>
-                    }
-                    <div className="artist-avatar-ring" />
-                  </div>
-                  <div className="artist-name" style={{ cursor: 'pointer' }} onClick={() => onArtistClick ? onArtistClick(artist) : undefined}>{artist.name}</div>
-                  <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      if (following) {
-                        unfollowArtist(artist.name);
-                        showToast(`Unfollowed ${artist.name}`);
-                      } else {
-                        followArtist(artist);
-                        showToast(`Following ${artist.name} ✓`, 'success');
-                      }
-                    }}
-                    style={{
-                      marginTop: 6,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                      padding: '5px 14px', borderRadius: 999,
-                      background: following ? 'rgba(255,107,157,0.12)' : 'rgba(255,255,255,0.08)',
-                      border: `1px solid ${following ? 'rgba(255,107,157,0.4)' : 'rgba(255,255,255,0.12)'}`,
-                      color: following ? 'var(--pink)' : 'var(--text-sub)',
-                      fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                      fontFamily: 'inherit', transition: 'all 0.2s',
-                    }}
-                  >
-                    {following
-                      ? <><UserCheck size={11} /> Following</>
-                      : <><UserPlus size={11} /> Follow</>
-                    }
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Ad — in normal scroll flow, never inside conditionals */}
-      <AdBanner slot="6203471608" style={{ marginBottom: 32 }} />
-
-      {/* Recently Played */}
-      {recentSongs.length > 0 && (
-        <section style={{ marginBottom: 40 }}>
-          <div className="section-header">
-            <h2 className="section-title">Recently Played</h2>
-          </div>
-          {recentSongs.slice(0, 8).map((song, i) => (
-            <SongCard
-              key={song.youtubeId}
-              song={song}
-              layout="row"
-              index={i}
-              isActive={currentSong?.youtubeId === song.youtubeId}
-              isPlaying={isPlaying && currentSong?.youtubeId === song.youtubeId}
-              isLiked={likedSongs.some(s => s.youtubeId === song.youtubeId)}
-              onPlay={handlePlay}
-              onLike={handleLike}
+      {showInput && (
+        <div className="playlist-input-wrap">
+          <div className="playlist-input">
+            <input
+              autoFocus
+              value={newPlaylistName}
+              onChange={e => setNewPlaylistName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleCreate()}
+              placeholder="Playlist name..."
+              maxLength={60}
             />
-          ))}
-        </section>
+            <button className="btn-add" onClick={handleCreate}>Add</button>
+          </div>
+        </div>
       )}
-    </div>
+
+      <div className="sidebar-playlists">
+        {playlists.length === 0 ? (
+          <p style={{ padding: '4px 12px', fontSize: 12, color: 'var(--text-muted)' }}>No playlists yet</p>
+        ) : playlists.map(pl => (
+          <div key={pl.id} className="sidebar-playlist-item" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', borderRadius: 8, cursor: 'pointer', transition: 'background 0.2s', position: 'relative' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            <div className="sidebar-playlist-thumb"><Music size={12} color="var(--pink)" /></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{pl.songs.length} songs</div>
+            </div>
+            <button
+              style={{ padding: 4, borderRadius: 6, color: 'var(--text-muted)', opacity: 0, transition: 'opacity 0.2s' }}
+              onClick={e => { e.stopPropagation(); deletePlaylist(pl.id); showToast('Playlist deleted'); }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; (e.currentTarget as HTMLButtonElement).style.color = '#ff4444'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0'; }}
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* User */}
+      {user && (
+        <div
+          className="sidebar-user"
+          onClick={onUserClick}
+          title="Account settings"
+          style={{ cursor: 'pointer', transition: 'background 0.15s' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <div className="sidebar-user-avatar">
+            {user.picture
+              ? <img src={user.picture} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              : user.name[0]}
+          </div>
+          <div className="sidebar-user-info">
+            <div className="sidebar-user-name" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</div>
+            <div className="sidebar-user-email" style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+          </div>
+          <Settings size={15} color="var(--text-muted)" style={{ flexShrink: 0, opacity: 0.6 }} />
+        </div>
+      )}
+    </aside>
   );
 }
