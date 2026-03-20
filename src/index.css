@@ -952,6 +952,8 @@ input[type="range"].volume { width: 80px; }
   padding: 4px;
   margin-bottom: 24px;
   gap: 2px;
+  /* Fixed height prevents layout jump when switching tabs */
+  flex-shrink: 0;
 }
 .lib-tab {
   flex: 1;
@@ -964,6 +966,9 @@ input[type="range"].volume { width: 80px; }
 }
 .lib-tab:hover { color: var(--text); }
 .lib-tab.active { background: rgba(255,255,255,0.1); color: var(--text); }
+
+/* Prevent layout jumping when switching tabs */
+.lib-content-area { min-height: 300px; }
 
 /* Playlist grid */
 .playlist-grid {
