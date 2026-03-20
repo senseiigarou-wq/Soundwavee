@@ -184,6 +184,7 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
         ))}
       </div>
 
+      <div className="lib-content-area">
       {/* Playlists */}
       {activeTab === 'playlists' && (
         playlists.length === 0
@@ -308,6 +309,8 @@ export function LibraryView({ onNavigate, onArtistClick }: { onNavigate?: (view:
               </div>
             </div>
       )}
+
+      </div>{/* end lib-content-area */}
 
       {/* Confirm Dialog */}
       <ConfirmDialog
