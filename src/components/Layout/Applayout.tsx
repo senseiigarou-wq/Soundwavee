@@ -38,7 +38,7 @@ export function AppLayout() {
     const songMatch = path.match(/^\/song\/([a-zA-Z0-9_-]+)$/);
     if (songMatch) {
       const youtubeId = songMatch[1];
-      usePlayerStore.getState().playSong({
+      usePlayerStore.getState().setCurrentSong({
         youtubeId,
         title:  'Shared Song',
         artist: '',
@@ -51,7 +51,7 @@ export function AppLayout() {
     // Handle /playlist/:token
     const playlistMatch = path.match(/^\/playlist\/([a-zA-Z0-9_-]+)$/);
     if (playlistMatch) {
-      // Token-based playlist sharing — extend this to load from Firestore if needed
+      // Extend this to load playlist from Firestore if needed
       window.history.replaceState({}, '', '/');
     }
   }, []);
