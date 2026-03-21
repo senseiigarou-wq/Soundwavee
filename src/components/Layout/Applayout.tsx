@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Layout/Sidebar';
 import { BottomNav } from '@/components/Layout/Bottomnav';
 import { NowPlayingBar, MobilePlayer } from '@/components/player/Nowplayingbar';
@@ -13,6 +13,7 @@ import { SeeAllView } from '@/components/home/SeeAllView';
 import { SocialView } from '@/components/Social/SocialView';
 import { SidebarProfilePanel } from '@/components/profile/Sidebarprofilepanel';
 import { useLibraryStore } from '@/store/libraryStore';
+import { usePlayerStore } from '@/store/playStore';
 import type { View, Artist, Genre, SocialPlaylist } from '@/types';
 
 type ProfileScreen = 'edit-profile' | 'notifications' | 'appearance' | 'privacy' | null;
@@ -28,6 +29,32 @@ export function AppLayout() {
   const [currentArtist, setCurrentArtist]   = useState<Artist | null>(null);
   const [artistHistory, setArtistHistory]   = useState<Artist[]>([]);
   const [seeAll, setSeeAll]                 = useState<{ genre: Genre; label: string } | null>(null);
+
+  // ── Handle shared song/playlist URLs ───────────────────────
+  useEffect(() => {
+    const path = window.location.pathname;
+
+    // Handle /song/:youtubeId
+    const songMatch = path.match(/^\/song\/([a-zA-Z0-9_-]+)$/);
+    if (songMatch) {
+      const youtubeId = songMatch[1];
+      usePlayerStore.getState().playSong({
+        youtubeId,
+        title:  'Shared Song',
+        artist: '',
+        cover:  `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`,
+      });
+      window.history.replaceState({}, '', '/');
+      return;
+    }
+
+    // Handle /playlist/:token
+    const playlistMatch = path.match(/^\/playlist\/([a-zA-Z0-9_-]+)$/);
+    if (playlistMatch) {
+      // Token-based playlist sharing — extend this to load from Firestore if needed
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
 
   const handleDesktopNavigate = (screen: NonNullable<ProfileScreen>) => {
     setDesktopProfile(screen);
