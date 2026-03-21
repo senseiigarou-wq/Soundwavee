@@ -19,6 +19,7 @@ import {
   deleteAccount,
 } from '@/services/authservice';
 import { createUserProfileIfNew, loadUserLibrary, upsertUserProfile, fetchUserProfile } from '@/services/Firestoreservice';
+import { upsertPublicProfile } from '@/services/socialService';
 import { useLibraryStore } from '@/store/libraryStore';
 import type { User, AuthState } from '@/types';
 
@@ -63,6 +64,7 @@ async function applyFirebaseUser(fu: FirebaseUser, set: (p: Partial<AuthStore>) 
   persistUser(user);
   try {
     await createUserProfileIfNew(user.id, user);
+    await upsertPublicProfile(user.id, user.name, user.picture).catch(() => {});
     const lib = await loadUserLibrary(user.id);
     useLibraryStore.getState().hydrateFromFirestore(lib);
   } catch (e) {
