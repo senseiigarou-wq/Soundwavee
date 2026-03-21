@@ -16,12 +16,17 @@ export interface Song {
 }
 
 export interface Playlist {
-  id: string;
-  name: string;
-  songs: Song[];
-  cover?: string;
-  createdAt: string;
-  updatedAt: string;
+  id:               string;
+  name:             string;
+  songs:            Song[];
+  cover?:           string;
+  createdAt:        string;
+  updatedAt:        string;
+  isPublic?:        boolean;
+  isCollaborative?: boolean;
+  collaborators?:   string[];   // uids allowed to add songs
+  shareToken?:      string;     // for share links
+  ownerId?:         string;
 }
 
 export interface Artist {
@@ -79,7 +84,7 @@ export interface LibraryState {
 
 export type Genre = 'all' | 'opm' | 'phonk' | 'pop' | 'rnb' | 'hiphop' | 'indie';
 
-export type View = 'home' | 'search' | 'library' | 'liked' | 'profile' | 'artist';
+export type View = 'home' | 'search' | 'library' | 'liked' | 'profile' | 'artist' | 'social';
 
 export interface SearchResult {
   songs: Song[];
@@ -133,4 +138,45 @@ export interface CacheEntry<T> {
   data: T;
   timestamp: number;
   ttl: number;
+}
+
+// ─── Social ──────────────────────────────────────────────────
+
+export interface PublicUser {
+  uid:            string;
+  displayName:    string;
+  avatar:         string;
+  followersCount: number;
+  followingCount: number;
+  isPublic:       boolean;
+}
+
+export interface SocialPlaylist {
+  id:              string;
+  name:            string;
+  ownerId:         string;
+  ownerName:       string;
+  ownerAvatar:     string;
+  songs:           Song[];
+  cover?:          string;
+  isPublic:        boolean;
+  isCollaborative: boolean;
+  collaborators:   string[];   // uids
+  shareToken:      string;
+  createdAt:       string;
+  updatedAt:       string;
+}
+
+export interface Playlist {
+  id:              string;
+  name:            string;
+  songs:           Song[];
+  cover?:          string;
+  createdAt:       string;
+  updatedAt:       string;
+  isPublic?:       boolean;
+  isCollaborative?: boolean;
+  collaborators?:  string[];
+  shareToken?:     string;
+  ownerId?:        string;
 }
