@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Home, Search, Library, Heart, Plus, Trash2, Music, Settings, type LucideIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Home, Search, Library, Heart, Plus, Trash2, Music, Settings, type LucideIcon, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useToast } from '@/components/common/Toast';
@@ -18,6 +18,7 @@ const navItems: { view: View; label: string; icon: LucideIcon }[] = [
   { view: 'search', label: 'Search', icon: Search },
   { view: 'library', label: 'Your Library', icon: Library },
   { view: 'liked', label: 'Liked Songs', icon: Heart },
+  { view: 'social',  label: 'Community',   icon: Users },
 ];
 
 export function Sidebar({ currentView, onViewChange, onUserClick }: SidebarProps) {
