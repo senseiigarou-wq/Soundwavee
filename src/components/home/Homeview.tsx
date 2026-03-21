@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { RefreshCw, ChevronRight, UserPlus, UserCheck, Disc3, Radio, BarChart3, ExternalLink } from 'lucide-react';
 import { YouTubeService } from '@/services/youtube';
-import { SpotifyClient, type SpotifyAlbum, type SpotifyPlaylist, type SpotifyStation } from '@/services/spotifyClient';
+import { DeezerClient, type DeezerAlbum, type DeezerTrack, type DeezerStation } from '@/services/deezerClient';
 import { usePlayerStore } from '@/store/playStore';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useYouTubePlayer } from '@/hooks/useYoutubePlayer';
@@ -34,9 +34,9 @@ export function HomeView({ onArtistClick, onSeeAll }: { onArtistClick?: (artist:
   const [artists, setArtists] = useState<Artist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeGenre, setActiveGenre] = useState<Genre>('all');
-  const [newReleases, setNewReleases]     = useState<SpotifyAlbum[]>([]);
-  const [featured, setFeatured]           = useState<SpotifyPlaylist[]>([]);
-  const [radioStations, setRadioStations] = useState<SpotifyStation[]>([]);
+  const [newReleases, setNewReleases]     = useState<DeezerAlbum[]>([]);
+  const [featured, setFeatured]           = useState<DeezerTrack[]>([]);
+  const [radioStations, setRadioStations] = useState<DeezerStation[]>([]);
 
   const { currentSong, isPlaying } = usePlayerStore();
   const { likedSongs, followArtist, unfollowArtist, isFollowing, loadQueue } = useLibraryStore();
@@ -57,9 +57,9 @@ export function HomeView({ onArtistClick, onSeeAll }: { onArtistClick?: (artist:
     loadTrending('all');
     YouTubeService.getPopularArtists(8).then(setArtists).catch(() => {});
     // Load Spotify sections in parallel (non-blocking)
-    SpotifyClient.getNewReleases(10).then(setNewReleases).catch(() => {});
-    SpotifyClient.getFeaturedPlaylists(8).then(setFeatured).catch(() => {});
-    SpotifyClient.getRadioStations(8).then(setRadioStations).catch(() => {});
+    DeezerClient.getTopAlbums(10).then(setNewReleases).catch(() => {});
+    DeezerClient.getChartTracks(10).then(setFeatured).catch(() => {});
+    DeezerClient.getRadioStations(8).then(setRadioStations).catch(() => {});
   }, [loadTrending]);
 
   const handlePlay = useCallback((song: Song) => {
@@ -186,33 +186,28 @@ export function HomeView({ onArtistClick, onSeeAll }: { onArtistClick?: (artist:
       )}
 
       {/* Ad — in normal scroll flow, never inside conditionals */}
-
-      {/* ── New Releases (Albums & Singles) ── */}
+      {/* ── Top Albums (Deezer) ── */}
       {newReleases.length > 0 && (
         <section style={{ marginBottom: 40 }}>
           <div className="section-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Disc3 size={18} color="var(--pink)" />
-              <h2 className="section-title">New Releases</h2>
+              <h2 className="section-title">Popular Albums</h2>
             </div>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 4 }}>
-              via Spotify
-            </span>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>via Deezer</span>
           </div>
           <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none' }}>
             {newReleases.map(album => (
-              <a key={album.id} href={album.spotifyUrl} target="_blank" rel="noopener noreferrer"
-                style={{ flexShrink: 0, width: 140, textDecoration: 'none', cursor: 'pointer' }}
-              >
+              <a key={album.id} href={album.deezerUrl} target="_blank" rel="noopener noreferrer"
+                style={{ flexShrink: 0, width: 140, textDecoration: 'none' }}>
                 <div style={{ width: 140, height: 140, borderRadius: 12, overflow: 'hidden', background: '#1a1a2a', marginBottom: 8, position: 'relative', boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}>
                   {album.cover
                     ? <img src={album.cover} alt={album.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
-                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
-                        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-                      />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Disc3 size={40} color="rgba(255,255,255,0.2)" /></div>
+                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.06)')}
+                        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')} />
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Disc3 size={40} color="rgba(255,255,255,0.15)" /></div>
                   }
-                  <div style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.7)', borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 700, color: album.type === 'single' ? '#1DB954' : 'var(--pink)', textTransform: 'uppercase' }}>
+                  <div style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.75)', borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 700, color: 'var(--pink)', textTransform: 'uppercase' }}>
                     {album.type}
                   </div>
                 </div>
@@ -224,7 +219,7 @@ export function HomeView({ onArtistClick, onSeeAll }: { onArtistClick?: (artist:
         </section>
       )}
 
-      {/* ── Featured Charts ── */}
+      {/* ── Featured Charts (Deezer Top Tracks) ── */}
       {featured.length > 0 && (
         <section style={{ marginBottom: 40 }}>
           <div className="section-header">
@@ -232,34 +227,31 @@ export function HomeView({ onArtistClick, onSeeAll }: { onArtistClick?: (artist:
               <BarChart3 size={18} color="var(--pink)" />
               <h2 className="section-title">Featured Charts</h2>
             </div>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>via Spotify</span>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>via Deezer</span>
           </div>
-          <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none' }}>
-            {featured.map(pl => (
-              <a key={pl.id} href={pl.spotifyUrl} target="_blank" rel="noopener noreferrer"
-                style={{ flexShrink: 0, width: 160, textDecoration: 'none' }}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {featured.map((track, i) => (
+              <a key={track.id} href={track.deezerUrl} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < featured.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', textDecoration: 'none', transition: 'background 0.15s', borderRadius: 8, paddingInline: 8 }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                <div style={{ width: 160, height: 160, borderRadius: 14, overflow: 'hidden', background: '#1a1a2a', marginBottom: 8, position: 'relative', boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}>
-                  {pl.cover
-                    ? <img src={pl.cover} alt={pl.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
-                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
-                        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-                      />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BarChart3 size={40} color="rgba(255,255,255,0.2)" /></div>
-                  }
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '20px 8px 8px', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', display: 'flex', justifyContent: 'flex-end' }}>
-                    <ExternalLink size={14} color="rgba(255,255,255,0.7)" />
-                  </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', width: 22, textAlign: 'center', flexShrink: 0 }}>{i + 1}</div>
+                <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: '#1a1a2a', flexShrink: 0 }}>
+                  {track.cover && <img src={track.cover} alt={track.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>{pl.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.trackCount} tracks</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.title}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.artist}</div>
+                </div>
+                <ExternalLink size={14} color="rgba(255,255,255,0.3)" style={{ flexShrink: 0 }} />
               </a>
             ))}
           </div>
         </section>
       )}
 
-      {/* ── Popular Radio ── */}
+      {/* ── Popular Radio (Deezer) ── */}
       {radioStations.length > 0 && (
         <section style={{ marginBottom: 40 }}>
           <div className="section-header">
@@ -267,23 +259,23 @@ export function HomeView({ onArtistClick, onSeeAll }: { onArtistClick?: (artist:
               <Radio size={18} color="var(--pink)" />
               <h2 className="section-title">Popular Radio</h2>
             </div>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>via Spotify</span>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>via Deezer</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none' }}>
             {radioStations.map(station => (
-              <div key={station.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 4px 8px', borderRadius: 14, transition: 'background 0.2s' }}
-                onClick={() => { showToast(`Searching ${station.name} radio...`); }}
-                onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.05)'}
-                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}
-              >
-                <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', background: '#1a1a2a', flexShrink: 0 }}>
+              <a key={station.id} href={station.deezerUrl} target="_blank" rel="noopener noreferrer"
+                style={{ flexShrink: 0, width: 110, textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 100, height: 100, borderRadius: 50, overflow: 'hidden', background: '#1a1a2a', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'transform 0.2s' }}
+                  onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.transform = 'scale(1.06)')}
+                  onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.transform = 'scale(1)')}
+                >
                   {station.cover
                     ? <img src={station.cover} alt={station.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Radio size={28} color="rgba(255,255,255,0.2)" /></div>
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Radio size={32} color="rgba(255,255,255,0.2)" /></div>
                   }
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{station.name}</div>
-              </div>
+              </a>
             ))}
           </div>
         </section>
