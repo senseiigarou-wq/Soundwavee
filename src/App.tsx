@@ -2,7 +2,7 @@
 // SOUNDWAVE — App Root
 // ============================================================
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useYouTubePlayer } from '@/hooks/useYoutubePlayer';
@@ -10,15 +10,16 @@ import { LoginPage } from '@/components/Auth/LoginPage';
 import { AppLayout } from '@/components/Layout/Applayout';
 import { ResetPasswordPage } from '@/components/Auth/Resetpasswordpage';
 import { ToastProvider } from '@/components/common/Toast';
+import { SoundwaveLogo } from '@/components/common/Soundwavelogo';
+import { InstallPWA } from '@/components/common/Installpwa';
+import { UpdateBanner } from '@/components/common/UpdateBanner';
+import { useAppUpdate } from '@/hooks/useAppUpdate';
 
 // ── Parse Firebase action URL params ─────────────────────────
 function getFirebaseActionParams() {
   const p = new URLSearchParams(window.location.search);
   return { mode: p.get('mode'), oobCode: p.get('oobCode') ?? '' };
 }
-
-import { SoundwaveLogo } from '@/components/common/Soundwavelogo';
-import { InstallPWA } from '@/components/common/Installpwa';
 
 function AuthLoading() {
   return (
@@ -40,13 +41,13 @@ function AppInner() {
   return isAuthenticated ? <AppLayout /> : <LoginPage />;
 }
 
-export function App() {
+function AppWithUpdate() {
+  const { updateReady, applyUpdate } = useAppUpdate();
+  const [dismissed, setDismissed] = useState(false);
   const { isInitialized, handleRedirectResult } = useAuthStore();
 
-  // Handle return from Google redirect sign-in
   useEffect(() => { handleRedirectResult(); }, []);
 
-  // ── Firebase email action handler (resetPassword, etc.) ───
   const { mode, oobCode } = getFirebaseActionParams();
   if (mode === 'resetPassword') {
     return (
@@ -60,8 +61,18 @@ export function App() {
     <ToastProvider>
       {isInitialized ? <AppInner /> : <AuthLoading />}
       <InstallPWA />
+      {updateReady && !dismissed && (
+        <UpdateBanner
+          onUpdate={applyUpdate}
+          onDismiss={() => setDismissed(true)}
+        />
+      )}
     </ToastProvider>
   );
+}
+
+export function App() {
+  return <AppWithUpdate />;
 }
 
 export default App;
