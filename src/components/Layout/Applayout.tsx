@@ -10,8 +10,10 @@ import { LibraryView } from '@/components/library/LibraryView';
 import { ProfileView } from '@/components/profile/Profileview';
 import { ArtistView } from '@/components/Artist/ArtistView';
 import { SeeAllView } from '@/components/home/SeeAllView';
+import { SocialView } from '@/components/Social/SocialView';
 import { SidebarProfilePanel } from '@/components/profile/Sidebarprofilepanel';
-import type { View, Artist, Genre } from '@/types';
+import { useLibraryStore } from '@/store/libraryStore';
+import type { View, Artist, Genre, SocialPlaylist } from '@/types';
 
 type ProfileScreen = 'edit-profile' | 'notifications' | 'appearance' | 'privacy' | null;
 
@@ -36,6 +38,12 @@ export function AppLayout() {
     if (fromView) setArtistHistory([]);
     setCurrentArtist(artist);
     setCurrentView('artist');
+  };
+
+  const handlePlaySocialPlaylist = (pl: SocialPlaylist) => {
+    if (pl.songs.length === 0) return;
+    useLibraryStore.getState().loadQueue(pl.songs, 0);
+    setCurrentView('home');
   };
 
   const handleArtistBack = () => {
@@ -63,6 +71,7 @@ export function AppLayout() {
       case 'search':  return <SearchView onArtistClick={(a: Artist) => navigateToArtist(a, 'search')} />;
       case 'library': return <LibraryView onNavigate={setCurrentView} onArtistClick={(a: Artist) => navigateToArtist(a, 'library')} />;
       case 'liked':   return <LibraryView onNavigate={setCurrentView} onArtistClick={(a: Artist) => navigateToArtist(a, 'liked')} />;
+      case 'social':  return <SocialView onPlaySocialPlaylist={handlePlaySocialPlaylist} />;
       case 'artist':  return currentArtist
         ? <ArtistView artist={currentArtist} onBack={handleArtistBack} onArtistClick={handleRelatedArtistClick} />
         : <HomeView onArtistClick={(a: Artist) => navigateToArtist(a, 'home')} />;
