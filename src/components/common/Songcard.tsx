@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Heart, MoreVertical, ListPlus } from 'lucide-react';
+import { Play, Heart, MoreVertical, ListPlus, Users } from 'lucide-react';
 import { SoundwaveIcon } from '@/components/common/Soundwavelogo';
 import { usePlayerStore } from '@/store/playStore';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useToast } from '@/components/common/Toast';
+import { AddToCollabModal } from '@/components/Social/AddToCollabModal';
 import type { Song } from '@/types';
 
 interface SongCardProps {
@@ -25,11 +26,12 @@ function coverBg(id: string) {
 
 // ── Inline context menu ──────────────────────────────────────
 function SongMenu({ song, onClose }: { song: Song; onClose: () => void }) {
-  const openAddToPlaylist = usePlayerStore(s => s.openAddToPlaylist);
-  const pendingPlaylist   = usePlayerStore(s => s.pendingPlaylist);
+  const openAddToPlaylist  = usePlayerStore(s => s.openAddToPlaylist);
+  const pendingPlaylist    = usePlayerStore(s => s.pendingPlaylist);
   const setPendingPlaylist = usePlayerStore(s => s.setPendingPlaylist);
-  const { addToPlaylist } = useLibraryStore();
+  const { addToPlaylist }  = useLibraryStore();
   const menuRef = useRef<HTMLDivElement>(null);
+  const [showCollab, setShowCollab] = useState(false);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -41,12 +43,13 @@ function SongMenu({ song, onClose }: { song: Song; onClose: () => void }) {
 
   const handleAddToPending = () => {
     if (!pendingPlaylist) return;
-    const success = addToPlaylist(pendingPlaylist.id, song);
-    if (success) {
-      // Show brief success then close
-    }
+    addToPlaylist(pendingPlaylist.id, song);
     onClose();
   };
+
+  if (showCollab) {
+    return <AddToCollabModal song={song} onClose={() => { setShowCollab(false); onClose(); }} />;
+  }
 
   return (
     <div
@@ -54,23 +57,17 @@ function SongMenu({ song, onClose }: { song: Song; onClose: () => void }) {
       style={{
         position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
         background: '#1e1e1e', border: '1px solid rgba(255,255,255,0.12)',
-        borderRadius: 12, zIndex: 100, minWidth: 200, overflow: 'hidden',
+        borderRadius: 12, zIndex: 100, minWidth: 210, overflow: 'hidden',
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         animation: 'atp-fade-in 0.12s ease',
       }}
       onClick={e => e.stopPropagation()}
     >
-      {/* If a pending playlist is active, show it as the primary action */}
+      {/* Pending playlist shortcut */}
       {pendingPlaylist && (
         <button
           onClick={handleAddToPending}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-            padding: '11px 14px', background: 'rgba(255,107,157,0.08)', border: 'none',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-            color: 'var(--pink)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            fontFamily: 'inherit', textAlign: 'left',
-          }}
+          style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'11px 14px', background:'rgba(255,107,157,0.08)', border:'none', borderBottom:'1px solid rgba(255,255,255,0.06)', color:'var(--pink)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,107,157,0.14)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,107,157,0.08)')}
         >
@@ -78,20 +75,27 @@ function SongMenu({ song, onClose }: { song: Song; onClose: () => void }) {
           Add to "{pendingPlaylist.name}"
         </button>
       )}
+
+      {/* My playlists */}
       <button
         onClick={() => { openAddToPlaylist(song); onClose(); }}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-          padding: '11px 14px', background: 'none', border: 'none',
-          color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-          fontFamily: 'inherit', textAlign: 'left',
-          transition: 'background 0.15s',
-        }}
+        style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'11px 14px', background:'none', border:'none', borderBottom:'1px solid rgba(255,255,255,0.05)', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textAlign:'left', transition:'background 0.15s' }}
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'none')}
       >
         <ListPlus size={15} color="var(--text-muted)" />
-        Add to Playlist…
+        Add to My Playlist…
+      </button>
+
+      {/* Collab playlists */}
+      <button
+        onClick={() => setShowCollab(true)}
+        style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'11px 14px', background:'none', border:'none', color:'#7ed0ec', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textAlign:'left', transition:'background 0.15s' }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(126,208,236,0.07)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+      >
+        <Users size={15} color="#7ed0ec" />
+        Add to Collab Playlist…
       </button>
     </div>
   );
