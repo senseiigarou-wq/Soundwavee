@@ -29,26 +29,29 @@ import type { Song, Playlist, User } from '@/types';
 
 // ─── Path helpers ─────────────────────────────────────────────
 
-const userDoc       = (uid: string)              => doc(db, 'users', uid);
-const playlistsCol  = (uid: string)              => collection(db, 'users', uid, 'playlists');
-const playlistDoc   = (uid: string, id: string)  => doc(db, 'users', uid, 'playlists', id);
-const likedCol      = (uid: string)              => collection(db, 'users', uid, 'likedSongs');
-const likedDoc      = (uid: string, yid: string) => doc(db, 'users', uid, 'likedSongs', yid);
-const recentDoc     = (uid: string)              => doc(db, 'users', uid, 'recentSongs', 'history');
+const userDoc      = (uid: string)              => doc(db, 'users', uid);
+const playlistsCol = (uid: string)              => collection(db, 'users', uid, 'playlists');
+const playlistDoc  = (uid: string, id: string)  => doc(db, 'users', uid, 'playlists', id);
+const likedCol     = (uid: string)              => collection(db, 'users', uid, 'likedSongs');
+const likedDoc     = (uid: string, yid: string) => doc(db, 'users', uid, 'likedSongs', yid);
+const recentDoc    = (uid: string)              => doc(db, 'users', uid, 'recentSongs', 'history');
 
 // ─── User Profile ─────────────────────────────────────────────
 
 /**
  * Called on every login.
- * - Creates full profile if new user
- * - Updates ALL fields for existing users so nothing goes missing
- * This is the permanent fix — no user will ever have missing fields.
+ * - Creates a full profile for new users
+ * - For existing users: syncs name/email/picture AND fills in
+ *   any missing fields (uid, displayName, isPublic, etc.)
+ *
+ * This permanently fixes old accounts that are missing fields
+ * without any manual Firestore editing needed.
  */
 export async function createUserProfileIfNew(uid: string, data: Omit<User, 'token' | 'id'>): Promise<void> {
   const snap = await getDoc(userDoc(uid));
 
   if (!snap.exists()) {
-    // Brand new user — create complete profile with all required fields
+    // Brand new user — create complete profile with ALL required fields
     await setDoc(userDoc(uid), {
       uid,
       id:             uid,
@@ -64,31 +67,30 @@ export async function createUserProfileIfNew(uid: string, data: Omit<User, 'toke
       updatedAt:      serverTimestamp(),
     });
   } else {
-    // Existing user — always sync ALL fields on every login
-    // This permanently fixes any user missing isPublic, displayName, uid etc.
+    // Existing user — sync latest info + fill any missing fields
     const existing = snap.data();
     await updateDoc(userDoc(uid), {
-      // Always update these
-      name:        data.name,
-      email:       data.email.toLowerCase(),
-      picture:     data.picture ?? existing.picture ?? '',
-      updatedAt:   serverTimestamp(),
+      // Always keep these up to date
+      name:      data.name,
+      email:     data.email.toLowerCase(),
+      picture:   data.picture ?? existing.picture ?? '',
+      updatedAt: serverTimestamp(),
 
-      // Fill in missing fields permanently — only sets if not already there
-      ...(!existing.uid          && { uid }),
-      ...(!existing.id           && { id: uid }),
-      ...(!existing.displayName  && { displayName: data.name }),
-      ...(!existing.avatar       && { avatar: data.picture ?? '' }),
-      ...(existing.isPublic === undefined && { isPublic: true }),
-      ...(existing.followersCount === undefined && { followersCount: 0 }),
-      ...(existing.followingCount === undefined && { followingCount: 0 }),
+      // Fill missing fields permanently on next login
+      ...(!existing.uid                               && { uid }),
+      ...(!existing.id                                && { id: uid }),
+      ...(!existing.displayName                       && { displayName: data.name }),
+      ...(!existing.avatar                            && { avatar: data.picture ?? '' }),
+      ...(existing.isPublic       === undefined       && { isPublic: true }),
+      ...(existing.followersCount === undefined       && { followersCount: 0 }),
+      ...(existing.followingCount === undefined       && { followingCount: 0 }),
     });
   }
 }
 
 /**
- * Update profile data (name + picture only).
- * Called when user explicitly saves profile changes.
+ * Update profile data when user explicitly saves changes.
+ * Syncs both the private (name/picture) and public (displayName/avatar) fields.
  */
 export async function upsertUserProfile(uid: string, data: Omit<User, 'token' | 'id'>): Promise<void> {
   await setDoc(userDoc(uid), {
