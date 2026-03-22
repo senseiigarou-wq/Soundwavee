@@ -24,32 +24,45 @@ import { useLibraryStore } from '@/store/libraryStore';
 import type { User, AuthState } from '@/types';
 
 interface AuthStore extends AuthState {
-  firebaseUser:        FirebaseUser | null;
-  isInitialized:       boolean;
-  error:               string;
-  lockRemaining:       number;
-  progressDelay:       number;
-  loginGoogle:         () => Promise<void>;
-  loginEmail:          (email: string, password: string) => Promise<void>;
-  registerEmail:       (email: string, password: string, name: string) => Promise<void>;
-  sendPasswordReset:   (email: string) => Promise<void>;
-  handleRedirectResult:() => Promise<void>;
-  logout:              () => Promise<void>;
-  updateProfileData:   (name: string, picture?: string) => Promise<void>;
-  changeUserPassword:  (current: string, next: string) => Promise<void>;
-  deleteUserAccount:   (password?: string) => Promise<void>;
-  clearError:          () => void;
-  setLoading:          (v: boolean) => void;
+  firebaseUser:         FirebaseUser | null;
+  isInitialized:        boolean;
+  error:                string;
+  lockRemaining:        number;
+  progressDelay:        number;
+  loginGoogle:          () => Promise<void>;
+  loginEmail:           (email: string, password: string) => Promise<void>;
+  registerEmail:        (email: string, password: string, name: string) => Promise<void>;
+  sendPasswordReset:    (email: string) => Promise<void>;
+  handleRedirectResult: () => Promise<void>;
+  logout:               () => Promise<void>;
+  updateProfileData:    (name: string, picture?: string) => Promise<void>;
+  changeUserPassword:   (current: string, next: string) => Promise<void>;
+  deleteUserAccount:    (password?: string) => Promise<void>;
+  clearError:           () => void;
+  setLoading:           (v: boolean) => void;
 }
 
 const USER_KEY = 'sw_auth_user';
 
 function toAppUser(fu: FirebaseUser): User {
-  return { id: fu.uid, name: fu.displayName ?? 'User', email: fu.email ?? '', picture: fu.photoURL ?? '', token: '' };
+  return {
+    id:      fu.uid,
+    name:    fu.displayName ?? 'User',
+    email:   fu.email ?? '',
+    picture: fu.photoURL ?? '',
+    token:   '',
+  };
 }
+
 function persistUser(u: User) {
-  localStorage.setItem(USER_KEY, JSON.stringify({ id: u.id, name: u.name, email: u.email, picture: u.picture }));
+  localStorage.setItem(USER_KEY, JSON.stringify({
+    id:      u.id,
+    name:    u.name,
+    email:   u.email,
+    picture: u.picture,
+  }));
 }
+
 function loadPersistedUser(): User | null {
   try {
     const raw = localStorage.getItem(USER_KEY);
@@ -67,8 +80,8 @@ async function applyFirebaseUser(fu: FirebaseUser, set: (p: Partial<AuthStore>) 
     await upsertPublicProfile(user.id, user.name, user.picture).catch(() => {});
     const lib = await loadUserLibrary(user.id);
     useLibraryStore.getState().hydrateFromFirestore(lib);
-  } catch (e) {
-    console.warn('[Auth] Firestore sync skipped:', (e as Error).message);
+  } catch {
+    // Firestore sync skipped — will retry on next session
   }
   set({ user, firebaseUser: fu, isAuthenticated: true, isLoading: false, error: '' });
 }
@@ -88,7 +101,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
     try {
       const fu = await signInWithGoogle();
       if (fu) await applyFirebaseUser(fu, set);
-      // null = redirect triggered, page navigates away
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sign-in failed.';
       set({ isLoading: false, error: msg, lockRemaining: getLockoutRemaining() });
@@ -141,7 +153,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   clearError: () => set({ error: '' }),
-  setLoading: (v) => set({ isLoading: v }),
+  setLoading:  (v) => set({ isLoading: v }),
 
   changeUserPassword: async (current, next) => {
     set({ isLoading: true, error: '' });
@@ -178,7 +190,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
       await updateUserProfile(name, picture);
       const fu = useAuthStore.getState().firebaseUser;
       if (fu) {
-        const updated = { ...useAuthStore.getState().user!, name, ...(picture !== undefined ? { picture } : {}) };
+        const updated = {
+          ...useAuthStore.getState().user!,
+          name,
+          ...(picture !== undefined ? { picture } : {}),
+        };
         persistUser(updated);
         await upsertUserProfile(updated.id, updated);
         set({ user: updated, isLoading: false });
@@ -190,14 +206,23 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 }));
 
+// ── Auth state listener ────────────────────────────────────────
+// Runs on every page load/session restore.
+// Also fixes missing Firestore fields for old accounts automatically.
 onAuthChange(async (fu) => {
   if (fu) {
     const user = toAppUser(fu);
-    // Restore avatar from Firestore (Firebase Auth photoURL can't hold base64)
+
+    // ✅ Fix missing fields for ALL users on every session restore
+    await createUserProfileIfNew(fu.uid, user).catch(() => {});
+    await upsertPublicProfile(fu.uid, user.name, user.picture).catch(() => {});
+
+    // Restore avatar/name from Firestore (Firebase Auth can't hold base64)
     const profile = await fetchUserProfile(fu.uid).catch(() => null);
     if (profile?.picture) user.picture = profile.picture;
     if (profile?.name)    user.name    = profile.name;
     persistUser(user);
+
     const already = useAuthStore.getState().isAuthenticated;
     if (!already) {
       try {
@@ -205,6 +230,7 @@ onAuthChange(async (fu) => {
         useLibraryStore.getState().hydrateFromFirestore(lib);
       } catch { /* local cache fallback */ }
     }
+
     useAuthStore.setState({ user, firebaseUser: fu, isAuthenticated: true, isInitialized: true });
   } else {
     localStorage.removeItem(USER_KEY);
