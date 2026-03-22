@@ -7,7 +7,7 @@
 import {
   doc, getDoc, setDoc, deleteDoc, updateDoc,
   collection, getDocs, query, where, orderBy, limit,
-  serverTimestamp, increment, writeBatch, onSnapshot,
+  serverTimestamp, writeBatch, onSnapshot,
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '@/config/Firebase';
@@ -36,7 +36,6 @@ export async function upsertPublicProfile(
   const ref  = userDoc(uid);
   const snap = await getDoc(ref);
   if (!snap.exists()) {
-    // New user — create full profile
     await setDoc(ref, {
       uid,
       displayName,
@@ -47,8 +46,6 @@ export async function upsertPublicProfile(
       createdAt:      serverTimestamp(),
     });
   } else {
-    // Existing user — also ensure isPublic is always set
-    // so older accounts become searchable automatically
     await updateDoc(ref, { displayName, avatar, isPublic: true });
   }
 }
@@ -86,7 +83,7 @@ export async function searchUserByEmail(
   const q = query(
     collection(db, 'users'),
     where('email', '==', email.toLowerCase()),
-    where('isPublic', '==', true), // required to match Firestore rules
+    where('isPublic', '==', true),
     limit(1)
   );
   const snaps = await getDocs(q);
@@ -100,24 +97,50 @@ export async function searchUserByEmail(
 // ═══════════════════════════════════════════════════════════════
 
 export async function followUser(myUid: string, targetUid: string): Promise<void> {
+  // Guard against undefined/empty values
+  if (!myUid || !targetUid) throw new Error('Invalid user IDs');
+
   const batch = writeBatch(db);
-  batch.set(followingDoc(myUid, targetUid), { uid: targetUid, followedAt: serverTimestamp() });
-  batch.set(followerDoc(targetUid, myUid),  { uid: myUid,     followedAt: serverTimestamp() });
-  batch.update(userDoc(myUid),     { followingCount: increment(1) });
-  batch.update(userDoc(targetUid), { followersCount: increment(1) });
+
+  // Write to MY following subcollection
+  batch.set(followingDoc(myUid, targetUid), {
+    uid:        targetUid,
+    followedAt: serverTimestamp(),
+  });
+
+  // Write to THEIR followers subcollection
+  batch.set(followerDoc(targetUid, myUid), {
+    uid:        myUid,
+    followedAt: serverTimestamp(),
+  });
+
+  // Only update MY own document (allowed by rules)
+  batch.update(userDoc(myUid), { followingCount: (await getDocs(followingCol(myUid))).size + 1 });
+
   await batch.commit();
 }
 
 export async function unfollowUser(myUid: string, targetUid: string): Promise<void> {
+  // Guard against undefined/empty values
+  if (!myUid || !targetUid) throw new Error('Invalid user IDs');
+
   const batch = writeBatch(db);
+
+  // Remove from MY following subcollection
   batch.delete(followingDoc(myUid, targetUid));
+
+  // Remove from THEIR followers subcollection
   batch.delete(followerDoc(targetUid, myUid));
-  batch.update(userDoc(myUid),     { followingCount: increment(-1) });
-  batch.update(userDoc(targetUid), { followersCount: increment(-1) });
+
+  // Only update MY own document (allowed by rules)
+  const currentCount = (await getDocs(followingCol(myUid))).size;
+  batch.update(userDoc(myUid), { followingCount: Math.max(0, currentCount - 1) });
+
   await batch.commit();
 }
 
 export async function isFollowing(myUid: string, targetUid: string): Promise<boolean> {
+  if (!myUid || !targetUid) return false;
   const snap = await getDoc(followingDoc(myUid, targetUid));
   return snap.exists();
 }
@@ -136,6 +159,18 @@ export async function getFollowers(uid: string): Promise<PublicUser[]> {
   if (!uids.length) return [];
   const profiles = await Promise.all(uids.map(id => getUserProfile(id)));
   return profiles.filter(Boolean) as PublicUser[];
+}
+
+/** Get real follower count from subcollection size */
+export async function getFollowerCount(uid: string): Promise<number> {
+  const snaps = await getDocs(followersCol(uid));
+  return snaps.size;
+}
+
+/** Get real following count from subcollection size */
+export async function getFollowingCount(uid: string): Promise<number> {
+  const snaps = await getDocs(followingCol(uid));
+  return snaps.size;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -211,7 +246,7 @@ export async function addSongToSocialPlaylist(
   if (!pl.isCollaborative && pl.ownerId !== uid) throw new Error('Not authorized');
   if (pl.isCollaborative && !pl.collaborators.includes(uid)) throw new Error('Not a collaborator');
   const songs = [...pl.songs];
-  if (songs.some(s => s.youtubeId === song.youtubeId)) return; // already added
+  if (songs.some(s => s.youtubeId === song.youtubeId)) return;
   songs.push({ ...song, addedAt: new Date().toISOString() });
   await updateDoc(socialPlDoc(playlistId), { songs, updatedAt: new Date().toISOString() });
 }
