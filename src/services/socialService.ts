@@ -16,13 +16,13 @@ import type { PublicUser, SocialPlaylist, Song } from '@/types';
 // ═══════════════════════════════════════════════════════════════
 // PATHS
 // ═══════════════════════════════════════════════════════════════
-const userDoc        = (uid: string)                  => doc(db, 'users', uid);
-const followersCol   = (uid: string)                  => collection(db, 'users', uid, 'followers');
-const followingCol   = (uid: string)                  => collection(db, 'users', uid, 'following');
-const followerDoc    = (uid: string, fid: string)     => doc(db, 'users', uid, 'followers', fid);
-const followingDoc   = (uid: string, fid: string)     => doc(db, 'users', uid, 'following', fid);
-const socialPlCol    = ()                              => collection(db, 'socialPlaylists');
-const socialPlDoc    = (id: string)                   => doc(db, 'socialPlaylists', id);
+const userDoc      = (uid: string)              => doc(db, 'users', uid);
+const followersCol = (uid: string)              => collection(db, 'users', uid, 'followers');
+const followingCol = (uid: string)              => collection(db, 'users', uid, 'following');
+const followerDoc  = (uid: string, fid: string) => doc(db, 'users', uid, 'followers', fid);
+const followingDoc = (uid: string, fid: string) => doc(db, 'users', uid, 'following', fid);
+const socialPlCol  = ()                         => collection(db, 'socialPlaylists');
+const socialPlDoc  = (id: string)               => doc(db, 'socialPlaylists', id);
 
 // ═══════════════════════════════════════════════════════════════
 // USER PROFILE
@@ -33,18 +33,23 @@ export async function upsertPublicProfile(
   displayName: string,
   avatar: string
 ): Promise<void> {
-  const ref = userDoc(uid);
+  const ref  = userDoc(uid);
   const snap = await getDoc(ref);
   if (!snap.exists()) {
+    // New user — create full profile
     await setDoc(ref, {
-      uid, displayName, avatar,
-      isPublic: true,
+      uid,
+      displayName,
+      avatar,
+      isPublic:       true,
       followersCount: 0,
       followingCount: 0,
-      createdAt: serverTimestamp(),
+      createdAt:      serverTimestamp(),
     });
   } else {
-    await updateDoc(ref, { displayName, avatar });
+    // Existing user — also ensure isPublic is always set
+    // so older accounts become searchable automatically
+    await updateDoc(ref, { displayName, avatar, isPublic: true });
   }
 }
 
@@ -73,7 +78,7 @@ export async function searchUsers(
     .filter(u => u.uid !== currentUid);
 }
 
-/** Search by exact email (stored separately for privacy) */
+/** Search by exact email */
 export async function searchUserByEmail(
   email: string,
   currentUid: string
@@ -81,7 +86,7 @@ export async function searchUserByEmail(
   const q = query(
     collection(db, 'users'),
     where('email', '==', email.toLowerCase()),
-    where('isPublic', '==', true),
+    where('isPublic', '==', true), // required to match Firestore rules
     limit(1)
   );
   const snaps = await getDocs(q);
@@ -97,7 +102,7 @@ export async function searchUserByEmail(
 export async function followUser(myUid: string, targetUid: string): Promise<void> {
   const batch = writeBatch(db);
   batch.set(followingDoc(myUid, targetUid), { uid: targetUid, followedAt: serverTimestamp() });
-  batch.set(followerDoc(targetUid, myUid), { uid: myUid,     followedAt: serverTimestamp() });
+  batch.set(followerDoc(targetUid, myUid),  { uid: myUid,     followedAt: serverTimestamp() });
   batch.update(userDoc(myUid),     { followingCount: increment(1) });
   batch.update(userDoc(targetUid), { followersCount: increment(1) });
   await batch.commit();
@@ -235,7 +240,7 @@ export async function joinCollaborativePlaylist(
   if (pl.collaborators.includes(uid)) return;
   await updateDoc(socialPlDoc(playlistId), {
     collaborators: [...pl.collaborators, uid],
-    updatedAt: new Date().toISOString(),
+    updatedAt:     new Date().toISOString(),
   });
 }
 
