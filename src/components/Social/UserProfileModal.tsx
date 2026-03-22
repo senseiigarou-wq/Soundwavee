@@ -30,20 +30,17 @@ export function UserProfileModal({ targetUser, onClose, onPlaylist }: UserProfil
     ]).then(([pls, isF]) => {
       setPlaylists(pls);
       setFollowing(isF);
-    }).catch(e => {
-      console.error('Profile load error:', e);
+    }).catch(() => {
+      showToast('Failed to load profile', 'error');
     }).finally(() => setLoading(false));
   }, [targetUser.uid, user]);
 
   const toggleFollow = async () => {
     if (!user) return;
-
-    // Guard against missing uid on old accounts
     if (!targetUser.uid) {
       showToast('Cannot follow — user profile incomplete', 'error');
       return;
     }
-
     try {
       if (following) {
         await unfollowUser(user.id, targetUser.uid);
@@ -54,8 +51,7 @@ export function UserProfileModal({ targetUser, onClose, onPlaylist }: UserProfil
         setFollowing(true);
         showToast(`Following ${targetUser.displayName} ♥`);
       }
-    } catch (e) {
-      console.error('Follow error:', e);
+    } catch {
       showToast('Action failed', 'error');
     }
   };
