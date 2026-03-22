@@ -18,11 +18,12 @@ const BASE = 'https://soundwavee.pages.dev';
 interface CollabPlaylistModalProps {
   onClose:    () => void;
   onPlay:     (pl: SocialPlaylist) => void;
+  onView?:    (pl: SocialPlaylist) => void;
 }
 
 type Tab = 'mine' | 'join' | 'create';
 
-export function CollabPlaylistModal({ onClose, onPlay }: CollabPlaylistModalProps) {
+export function CollabPlaylistModal({ onClose, onPlay, onView }: CollabPlaylistModalProps) {
   const { user }      = useAuthStore();
   const { showToast } = useToast();
   const [tab, setTab]           = useState<Tab>('mine');
@@ -153,8 +154,8 @@ export function CollabPlaylistModal({ onClose, onPlay }: CollabPlaylistModalProp
                     )}
                   </div>
                   <div style={{ display:'flex', gap:8 }}>
-                    <button onClick={() => onPlay(pl)} style={{ flex:1, padding:'8px', borderRadius:10, background:'rgba(255,107,157,0.1)', border:'1px solid rgba(255,107,157,0.2)', color:'var(--pink)', fontWeight:600, fontSize:12, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
-                      <Play size={12} /> Play
+                    <button onClick={() => { onView ? (onClose(), onView(pl)) : onPlay(pl); }} style={{ flex:1, padding:'8px', borderRadius:10, background:'rgba(255,107,157,0.1)', border:'1px solid rgba(255,107,157,0.2)', color:'var(--pink)', fontWeight:600, fontSize:12, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
+                      <Play size={12} /> View & Play
                     </button>
                     <button onClick={() => copyInviteLink(pl)} style={{ flex:1, padding:'8px', borderRadius:10, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color: copiedId===pl.id ? '#1DB954' : 'var(--text-muted)', fontWeight:600, fontSize:12, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
                       {copiedId===pl.id ? <><Check size={12} /> Copied!</> : <><Link size={12} /> Invite</>}
