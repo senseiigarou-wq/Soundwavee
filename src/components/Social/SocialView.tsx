@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { UserSearchModal } from './UserSearchModal';
 import { UserProfileModal } from './UserProfileModal';
 import { CollabPlaylistModal } from './CollabPlaylistModal';
+import { CollabPlaylistView } from './CollabPlaylistView';
 import type { PublicUser, SocialPlaylist } from '@/types';
 
 interface SocialViewProps {
@@ -17,16 +18,27 @@ interface SocialViewProps {
 
 export function SocialView({ onPlaySocialPlaylist }: SocialViewProps) {
   const { user } = useAuthStore();
-  const [following, setFollowing]   = useState<PublicUser[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [showSearch, setShowSearch] = useState(false);
-  const [showCollab, setShowCollab] = useState(false);
-  const [viewUser, setViewUser]     = useState<PublicUser | null>(null);
+  const [following, setFollowing]       = useState<PublicUser[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [showSearch, setShowSearch]     = useState(false);
+  const [showCollab, setShowCollab]     = useState(false);
+  const [viewUser, setViewUser]         = useState<PublicUser | null>(null);
+  const [viewPlaylist, setViewPlaylist] = useState<SocialPlaylist | null>(null);
 
   useEffect(() => {
     if (!user) return;
     getFollowing(user.id).then(setFollowing).finally(() => setLoading(false));
   }, [user]);
+
+  // Show full playlist view when a playlist is selected
+  if (viewPlaylist) {
+    return (
+      <CollabPlaylistView
+        playlist={viewPlaylist}
+        onBack={() => setViewPlaylist(null)}
+      />
+    );
+  }
 
   return (
     <div style={{ paddingBottom: 32 }}>
@@ -107,6 +119,7 @@ export function SocialView({ onPlaySocialPlaylist }: SocialViewProps) {
         <CollabPlaylistModal
           onClose={() => setShowCollab(false)}
           onPlay={pl => { setShowCollab(false); onPlaySocialPlaylist(pl); }}
+          onView={(pl: SocialPlaylist) => { setShowCollab(false); setViewPlaylist(pl); }}
         />
       )}
     </div>
