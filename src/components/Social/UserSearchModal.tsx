@@ -7,7 +7,7 @@ import { X, Search, UserPlus, UserCheck, Loader, Users } from 'lucide-react';
 import { searchUsers, searchUserByEmail, followUser, unfollowUser, isFollowing as checkFollowing } from '@/services/socialService';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/components/common/Toast';
-import type { PublicUser, SocialPlaylist } from '@/types';
+import type { PublicUser } from '@/types';
 
 interface UserSearchModalProps {
   onClose:    () => void;
@@ -33,14 +33,18 @@ export function UserSearchModal({ onClose, onViewUser }: UserSearchModalProps) {
       } else {
         found = await searchUsers(q, user.id);
       }
-      setResults(found);
-      // Check follow status for all results
-      const statuses = await Promise.all(found.map(u => checkFollowing(user.id, u.uid)));
+
+      // Filter out incomplete profiles before checking follow status
+      const validFound = found.filter(u => Boolean(u.uid));
+      setResults(validFound);
+
+      const statuses = await Promise.all(
+        validFound.map(u => checkFollowing(user.id, u.uid))
+      );
       const followSet = new Set<string>();
-      found.forEach((u, i) => { if (statuses[i]) followSet.add(u.uid); });
+      validFound.forEach((u, i) => { if (statuses[i]) followSet.add(u.uid); });
       setFollowing(followSet);
-    } catch (e) {
-      console.error('Search error:', e);
+    } catch {
       showToast('Search failed', 'error');
     } finally {
       setLoading(false);
@@ -49,13 +53,10 @@ export function UserSearchModal({ onClose, onViewUser }: UserSearchModalProps) {
 
   const handleFollow = async (targetUser: PublicUser) => {
     if (!user) return;
-
-    // Guard against missing uid on old accounts
     if (!targetUser.uid) {
       showToast('Cannot follow — user profile incomplete', 'error');
       return;
     }
-
     try {
       if (following.has(targetUser.uid)) {
         await unfollowUser(user.id, targetUser.uid);
@@ -66,8 +67,7 @@ export function UserSearchModal({ onClose, onViewUser }: UserSearchModalProps) {
         setFollowing(prev => new Set([...prev, targetUser.uid]));
         showToast(`Following ${targetUser.displayName} ♥`);
       }
-    } catch (e) {
-      console.error('Follow error:', e);
+    } catch {
       showToast('Action failed', 'error');
     }
   };
