@@ -10,13 +10,6 @@
 //   users/{uid}/likedSongs/{youtubeId} ← one doc per liked song
 //   users/{uid}/recentSongs/history    ← single doc, array of songs
 //
-// Security:
-//   Every read/write is rejected by Firestore Security Rules
-//   unless the request.auth.uid matches the {uid} in the path.
-//   This means: users can ONLY access their OWN data.
-//   No user can read or write another user's documents — even
-//   if they somehow know the uid.
-//
 // ============================================================
 
 import {
@@ -36,25 +29,75 @@ import type { Song, Playlist, User } from '@/types';
 
 // ─── Path helpers ─────────────────────────────────────────────
 
-const userDoc    = (uid: string) => doc(db, 'users', uid);
-const playlistsCol  = (uid: string) => collection(db, 'users', uid, 'playlists');
-const playlistDoc   = (uid: string, id: string) => doc(db, 'users', uid, 'playlists', id);
-const likedCol      = (uid: string) => collection(db, 'users', uid, 'likedSongs');
+const userDoc       = (uid: string)              => doc(db, 'users', uid);
+const playlistsCol  = (uid: string)              => collection(db, 'users', uid, 'playlists');
+const playlistDoc   = (uid: string, id: string)  => doc(db, 'users', uid, 'playlists', id);
+const likedCol      = (uid: string)              => collection(db, 'users', uid, 'likedSongs');
 const likedDoc      = (uid: string, yid: string) => doc(db, 'users', uid, 'likedSongs', yid);
-const recentDoc     = (uid: string) => doc(db, 'users', uid, 'recentSongs', 'history');
+const recentDoc     = (uid: string)              => doc(db, 'users', uid, 'recentSongs', 'history');
 
 // ─── User Profile ─────────────────────────────────────────────
 
 /**
- * Create or update user profile on login.
- * Uses merge: true so existing fields aren't overwritten.
+ * Called on every login.
+ * - Creates full profile if new user
+ * - Updates ALL fields for existing users so nothing goes missing
+ * This is the permanent fix — no user will ever have missing fields.
+ */
+export async function createUserProfileIfNew(uid: string, data: Omit<User, 'token' | 'id'>): Promise<void> {
+  const snap = await getDoc(userDoc(uid));
+
+  if (!snap.exists()) {
+    // Brand new user — create complete profile with all required fields
+    await setDoc(userDoc(uid), {
+      uid,
+      id:             uid,
+      name:           data.name,
+      email:          data.email.toLowerCase(),
+      picture:        data.picture ?? '',
+      displayName:    data.name,
+      avatar:         data.picture ?? '',
+      isPublic:       true,
+      followersCount: 0,
+      followingCount: 0,
+      createdAt:      serverTimestamp(),
+      updatedAt:      serverTimestamp(),
+    });
+  } else {
+    // Existing user — always sync ALL fields on every login
+    // This permanently fixes any user missing isPublic, displayName, uid etc.
+    const existing = snap.data();
+    await updateDoc(userDoc(uid), {
+      // Always update these
+      name:        data.name,
+      email:       data.email.toLowerCase(),
+      picture:     data.picture ?? existing.picture ?? '',
+      updatedAt:   serverTimestamp(),
+
+      // Fill in missing fields permanently — only sets if not already there
+      ...(!existing.uid          && { uid }),
+      ...(!existing.id           && { id: uid }),
+      ...(!existing.displayName  && { displayName: data.name }),
+      ...(!existing.avatar       && { avatar: data.picture ?? '' }),
+      ...(existing.isPublic === undefined && { isPublic: true }),
+      ...(existing.followersCount === undefined && { followersCount: 0 }),
+      ...(existing.followingCount === undefined && { followingCount: 0 }),
+    });
+  }
+}
+
+/**
+ * Update profile data (name + picture only).
+ * Called when user explicitly saves profile changes.
  */
 export async function upsertUserProfile(uid: string, data: Omit<User, 'token' | 'id'>): Promise<void> {
   await setDoc(userDoc(uid), {
-    name:      data.name,
-    email:     data.email,
-    picture:   data.picture,
-    updatedAt: serverTimestamp(),
+    name:        data.name,
+    email:       data.email.toLowerCase(),
+    picture:     data.picture,
+    displayName: data.name,
+    avatar:      data.picture,
+    updatedAt:   serverTimestamp(),
   }, { merge: true });
 }
 
@@ -66,26 +109,6 @@ export async function fetchUserProfile(uid: string): Promise<{ name?: string; pi
     const d = snap.data();
     return { name: d.name, picture: d.picture };
   } catch { return null; }
-}
-
-/** Create profile on very first login — also sets createdAt. */
-export async function createUserProfileIfNew(uid: string, data: Omit<User, 'token' | 'id'>): Promise<void> {
-  const snap = await getDoc(userDoc(uid));
-  if (!snap.exists()) {
-    await setDoc(userDoc(uid), {
-      name:      data.name,
-      email:     data.email,
-      picture:   data.picture,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  } else {
-    // Existing user — just update last seen
-    await updateDoc(userDoc(uid), {
-      picture:   data.picture,
-      updatedAt: serverTimestamp(),
-    });
-  }
 }
 
 // ─── Playlists ────────────────────────────────────────────────
@@ -122,7 +145,6 @@ export async function deletePlaylistFromDB(uid: string, id: string): Promise<voi
 export async function fetchLikedSongs(uid: string): Promise<Song[]> {
   const snap = await getDocs(likedCol(uid));
   const songs = snap.docs.map(d => d.data() as Song);
-  // Sort by likedAt descending (newest first)
   return songs.sort((a, b) =>
     (b.likedAt ?? '').localeCompare(a.likedAt ?? ''),
   );
@@ -148,7 +170,6 @@ export async function fetchRecentSongs(uid: string): Promise<Song[]> {
 }
 
 export async function saveRecentSongs(uid: string, songs: Song[]): Promise<void> {
-  // Cap at 20 entries to keep the document small
   const capped = songs.slice(0, 20);
   await setDoc(recentDoc(uid), { songs: capped, updatedAt: new Date().toISOString() });
 }
@@ -175,15 +196,12 @@ export async function loadUserLibrary(uid: string): Promise<UserLibraryData> {
 export async function deleteAllUserData(uid: string): Promise<void> {
   const batch = writeBatch(db);
 
-  // Delete playlists
   const plSnap = await getDocs(playlistsCol(uid));
   plSnap.docs.forEach(d => batch.delete(d.ref));
 
-  // Delete liked songs
   const liSnap = await getDocs(likedCol(uid));
   liSnap.docs.forEach(d => batch.delete(d.ref));
 
-  // Delete recent songs + profile
   batch.delete(recentDoc(uid));
   batch.delete(userDoc(uid));
 
