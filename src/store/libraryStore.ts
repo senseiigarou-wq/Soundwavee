@@ -37,8 +37,11 @@ function getUid(): string | null {
 }
 
 // ─── Background Firestore sync helper ────────────────────────
+// Retries once after 2s on failure to handle transient errors
 function syncBg(fn: () => Promise<void>) {
-  fn().catch(err => console.warn('[Firestore sync]', err));
+  fn().catch(() => {
+    setTimeout(() => fn().catch(e => console.warn('[Firestore sync]', e)), 2000);
+  });
 }
 
 // ─── Store ───────────────────────────────────────────────────
@@ -146,7 +149,6 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     StorageService.saveLikedSongs(updated);
     set({ likedSongs: updated });
 
-    // Sync to Firestore in background
     const uid = getUid();
     if (uid) {
       syncBg(() => alreadyLiked
