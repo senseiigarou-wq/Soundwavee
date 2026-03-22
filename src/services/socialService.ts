@@ -81,6 +81,7 @@ export async function searchUserByEmail(
   const q = query(
     collection(db, 'users'),
     where('email', '==', email.toLowerCase()),
+    where('isPublic', '==', true),
     limit(1)
   );
   const snaps = await getDocs(q);
