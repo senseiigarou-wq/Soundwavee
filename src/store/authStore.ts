@@ -18,7 +18,7 @@ import {
   changePassword,
   deleteAccount,
 } from '@/services/authservice';
-import { createUserProfileIfNew, loadUserLibrary, upsertUserProfile, fetchUserProfile } from '@/services/Firestoreservice';
+import { createUserProfileIfNew, loadUserLibrary, upsertUserProfile, fetchUserProfile, savePlaylist } from '@/services/Firestoreservice';
 import { upsertPublicProfile } from '@/services/socialService';
 import { useLibraryStore } from '@/store/libraryStore';
 import type { User, AuthState } from '@/types';
@@ -146,6 +146,22 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   logout: async () => {
+    // ── Flush all playlists to Firestore BEFORE signing out ───
+    // syncBg() is fire-and-forget — signing out first invalidates
+    // the auth token so pending writes get rejected silently.
+    // Awaiting here guarantees data is saved while token is valid.
+    try {
+      const raw = localStorage.getItem(USER_KEY);
+      const uid = raw ? (JSON.parse(raw) as { id: string }).id : null;
+      if (uid) {
+        const { playlists } = useLibraryStore.getState();
+        if (playlists.length > 0) {
+          await Promise.all(playlists.map(pl => savePlaylist(uid, pl)));
+        }
+      }
+    } catch (e) {
+      console.warn('[logout] playlist flush failed:', e);
+    }
     await signOut();
     localStorage.removeItem(USER_KEY);
     useLibraryStore.getState().clearAll();
