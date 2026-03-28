@@ -13,6 +13,7 @@ import { ToastProvider } from '@/components/common/Toast';
 import { SoundwaveLogo } from '@/components/common/Soundwavelogo';
 import { InstallPWA } from '@/components/common/Installpwa';
 import { UpdateBanner } from '@/components/common/UpdateBanner';
+import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { useAppUpdate } from '@/hooks/useAppUpdate';
 
 // ── Parse Firebase action URL params ─────────────────────────
@@ -59,6 +60,7 @@ function AppWithUpdate() {
 
   return (
     <ToastProvider>
+      <OfflineBanner />
       {isInitialized ? <AppInner /> : <AuthLoading />}
       <InstallPWA />
       {updateReady && !dismissed && (
