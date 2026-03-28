@@ -190,7 +190,7 @@ export function SearchView({ onArtistClick }: { onArtistClick?: (artist: import(
       {/* Source tabs */}
       <div style={{ display:'flex', gap:6, marginBottom:16 }}>
         <button onClick={() => setTab('youtube')} style={{ flex:1, padding:'9px', borderRadius:10, border:`1.5px solid ${tab==='youtube' ? 'rgba(255,0,0,0.4)' : 'rgba(255,255,255,0.08)'}`, background: tab==='youtube' ? 'rgba(255,0,0,0.08)' : 'rgba(255,255,255,0.03)', color: tab==='youtube' ? '#ff4444' : 'var(--text-muted)', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-          <Youtube size={14} /> YouTube
+          <Youtube size={14} /> Wave
           {searched && ytResults.length > 0 && <span style={{ fontSize:10, background:'rgba(255,0,0,0.15)', padding:'1px 6px', borderRadius:10 }}>{ytResults.length}</span>}
         </button>
         <button onClick={() => setTab('jamendo')} style={{ flex:1, padding:'9px', borderRadius:10, border:`1.5px solid ${tab==='jamendo' ? 'rgba(29,185,84,0.4)' : 'rgba(255,255,255,0.08)'}`, background: tab==='jamendo' ? 'rgba(29,185,84,0.08)' : 'rgba(255,255,255,0.03)', color: tab==='jamendo' ? '#1DB954' : 'var(--text-muted)', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
