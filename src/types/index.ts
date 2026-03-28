@@ -13,6 +13,7 @@ export interface Song {
   duration?: number;
   likedAt?: string;
   addedAt?: string;
+  audioUrl?: string;  // Jamendo direct MP3 URL (undefined for YouTube songs)
 }
 
 export interface Playlist {
