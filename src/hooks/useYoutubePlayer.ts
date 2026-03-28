@@ -219,10 +219,16 @@ export function useYouTubePlayer() {
       if (!jamendoAudio) {
         jamendoAudio = new Audio();
         jamendoAudio.addEventListener('timeupdate', () => {
-          usePlayerStore.getState().setCurrentTime(jamendoAudio!.currentTime);
+          usePlayerStore.getState().setTime(
+            jamendoAudio!.currentTime,
+            jamendoAudio!.duration || 0
+          );
         });
         jamendoAudio.addEventListener('loadedmetadata', () => {
-          usePlayerStore.getState().setDuration(jamendoAudio!.duration);
+          usePlayerStore.getState().setTime(
+            jamendoAudio!.currentTime,
+            jamendoAudio!.duration || 0
+          );
         });
         jamendoAudio.addEventListener('ended', () => {
           usePlayerStore.getState().setPlaying(false);
@@ -238,7 +244,7 @@ export function useYouTubePlayer() {
       }
 
       // Use cached audio if available (works offline), else stream
-      getCachedAudioUrl(rawUrl).then(resolvedUrl => {
+      getCachedAudioUrl(rawUrl).then((resolvedUrl: string) => {
         jamendoAudio!.src = resolvedUrl;
         jamendoAudio!.volume = usePlayerStore.getState().isMuted ? 0 : usePlayerStore.getState().volume / 100;
         jamendoAudio!.play().catch(() => {});
