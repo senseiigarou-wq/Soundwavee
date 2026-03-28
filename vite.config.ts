@@ -46,6 +46,26 @@ export default defineConfig(({ mode }) => {
             globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
             runtimeCaching: [
               {
+                urlPattern: /^https:\/\/mp3l\.jamendo\.com\/.*/i,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'jamendo-audio-v1',
+                  expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }, // 30 days
+                  cacheableResponse: { statuses: [0, 200] },
+                  rangeRequests: true,
+                },
+              },
+              {
+                urlPattern: /^https:\/\/storage\.jamendo\.com\/.*/i,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'jamendo-audio-v1',
+                  expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 },
+                  cacheableResponse: { statuses: [0, 200] },
+                  rangeRequests: true,
+                },
+              },
+              {
                 urlPattern: /^https:\/\/i\.ytimg\.com\/.*/i,
                 handler: 'CacheFirst',
                 options: {
