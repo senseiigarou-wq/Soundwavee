@@ -5,11 +5,13 @@
 // times they re-render.
 // ============================================================
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { usePlayerStore } from '@/store/playStore';
 import { useLibraryStore } from '@/store/libraryStore';
 import { StorageService } from '@/services/storage';
 import { useMediaSession } from './Usemediasession';
+import { JamendoService } from '@/services/jamendoService';
+import { getCachedAudioUrl, cacheSongForOffline } from '@/services/offlineService';
 import type { YTPlayer, YTPlayerOptions, Song } from '@/types';
 
 declare global {
@@ -27,6 +29,7 @@ declare global {
 let ytInitialized  = false;  // YT player created?
 let progressTimer: number | null = null;
 let bgAudio: HTMLAudioElement | null = null;
+let jamendoAudio: HTMLAudioElement | null = null;  // Jamendo direct MP3 player
 
 // Silent 1-second looping MP3 — holds the OS audio session alive
 const SILENT_MP3 =
@@ -200,16 +203,78 @@ export function useYouTubePlayer() {
 
   // ── Public actions ──────────────────────────────────────────
   const loadAndPlay = useCallback((song: Song) => {
+    usePlayerStore.getState().setCurrentSong(song);
+    StorageService.addToRecent(song);
+    useLibraryStore.getState().addToRecent(song);
+
+    // ── Jamendo: play direct MP3 ──────────────────────────────
+    if (JamendoService.isJamendo(song.youtubeId)) {
+      const rawUrl = song.audioUrl ?? JamendoService.getAudioUrl(song.youtubeId);
+      if (!rawUrl) return;
+
+      // Pause YouTube if playing
+      const player = usePlayerStore.getState().ytPlayer;
+      try { player?.pauseVideo(); } catch {}
+
+      if (!jamendoAudio) {
+        jamendoAudio = new Audio();
+        jamendoAudio.addEventListener('timeupdate', () => {
+          usePlayerStore.getState().setCurrentTime(jamendoAudio!.currentTime);
+        });
+        jamendoAudio.addEventListener('loadedmetadata', () => {
+          usePlayerStore.getState().setDuration(jamendoAudio!.duration);
+        });
+        jamendoAudio.addEventListener('ended', () => {
+          usePlayerStore.getState().setPlaying(false);
+          handleNext();
+        });
+        jamendoAudio.addEventListener('play', () => {
+          usePlayerStore.getState().setPlaying(true);
+          usePlayerStore.getState().setReady(true);
+        });
+        jamendoAudio.addEventListener('pause', () => {
+          usePlayerStore.getState().setPlaying(false);
+        });
+      }
+
+      // Use cached audio if available (works offline), else stream
+      getCachedAudioUrl(rawUrl).then(resolvedUrl => {
+        jamendoAudio!.src = resolvedUrl;
+        jamendoAudio!.volume = usePlayerStore.getState().isMuted ? 0 : usePlayerStore.getState().volume / 100;
+        jamendoAudio!.play().catch(() => {});
+        // Auto-cache in background for future offline use
+        cacheSongForOffline(song).catch(() => {});
+      });
+
+      bgActivate();
+      return;
+    }
+
+    // ── YouTube: load via iframe ──────────────────────────────
+    // Stop Jamendo if playing
+    if (jamendoAudio) {
+      jamendoAudio.pause();
+      jamendoAudio.src = '';
+    }
     const player = usePlayerStore.getState().ytPlayer;
     if (!player) return;
     bgActivate();
     player.loadVideoById(song.youtubeId);
-    usePlayerStore.getState().setCurrentSong(song);
-    StorageService.addToRecent(song);
-    useLibraryStore.getState().addToRecent(song);
   }, []);
 
   const toggle = useCallback(() => {
+    const currentSong = usePlayerStore.getState().currentSong;
+    // Jamendo toggle
+    if (currentSong && JamendoService.isJamendo(currentSong.youtubeId) && jamendoAudio) {
+      if (jamendoAudio.paused) {
+        bgActivate();
+        jamendoAudio.play().catch(() => {});
+      } else {
+        jamendoAudio.pause();
+      }
+      return;
+    }
+    // YouTube toggle
     const player = usePlayerStore.getState().ytPlayer;
     if (!player) return;
     if (usePlayerStore.getState().isPlaying) {
@@ -221,6 +286,13 @@ export function useYouTubePlayer() {
   }, []);
 
   const seekTo = useCallback((pct: number) => {
+    const currentSong = usePlayerStore.getState().currentSong;
+    // Jamendo seek
+    if (currentSong && JamendoService.isJamendo(currentSong.youtubeId) && jamendoAudio) {
+      jamendoAudio.currentTime = (pct / 100) * jamendoAudio.duration;
+      return;
+    }
+    // YouTube seek
     const player = usePlayerStore.getState().ytPlayer;
     if (!player) return;
     player.seekTo((pct / 100) * (player.getDuration?.() ?? 0), true);
