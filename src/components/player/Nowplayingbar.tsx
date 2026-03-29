@@ -132,7 +132,7 @@ export function MobilePlayer() {
 
   return (
     <>
-      <div className="mobile-player">
+      <div className="mobile-player" style={{ '--player-pct': `${pct}%` } as React.CSSProperties}>
         {/* Top row: thumb + info + controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
           <div className="mobile-player-thumb" style={{ borderRadius: 8, overflow: 'hidden', background: '#1a1a1a', flexShrink: 0 }} onClick={openFullPlayer}>
