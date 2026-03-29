@@ -12,6 +12,11 @@ import { StorageService } from '@/services/storage';
 import { useMediaSession } from './Usemediasession';
 import { JamendoService } from '@/services/jamendoService';
 import { getCachedAudioUrl, cacheSongForOffline } from '@/services/offlineService';
+import {
+  startAudioContextKeepalive,
+  resumeAudioContext,
+  onAppResume,
+} from '@/services/backgroundPlay';
 import type { YTPlayer, YTPlayerOptions, Song } from '@/types';
 
 declare global {
@@ -67,6 +72,8 @@ function stopProgress() {
 
 function bgActivate() {
   getBgAudio().play().catch(() => {});
+  startAudioContextKeepalive();
+  resumeAudioContext();
 }
 
 function bgDeactivate() {
@@ -183,6 +190,33 @@ export function useYouTubePlayer() {
     // NO cleanup stopProgress() here — that was killing the interval on re-render
   }, []); // empty deps = truly runs once per mount, no re-runs
 
+  // ── Background playback recovery ───────────────────────────
+  // When user comes back to the tab after switching apps, resume
+  // any audio that the browser may have suspended.
+  useEffect(() => {
+    const unsub = onAppResume(() => {
+      const { isPlaying: playing, currentSong: song, ytPlayer } = usePlayerStore.getState();
+      if (!playing) return;
+
+      if (song && JamendoService.isJamendo(song.youtubeId) && jamendoAudio) {
+        // Resume Jamendo audio element
+        if (jamendoAudio.paused) {
+          jamendoAudio.play().catch(() => {});
+        }
+      } else if (ytPlayer) {
+        // Resume YouTube player — browser may have paused it
+        try {
+          const state = ytPlayer.getPlayerState?.();
+          // YT.PlayerState.PAUSED === 2
+          if (state === 2) ytPlayer.playVideo();
+        } catch {}
+      }
+
+      bgActivate(); // re-activate silent audio + AudioContext
+    });
+    return unsub;
+  }, []);
+
   // ── Media Session (lock screen controls) ───────────────────
   const currentSong = usePlayerStore(s => s.currentSong);
   const isPlaying   = usePlayerStore(s => s.isPlaying);
@@ -190,12 +224,66 @@ export function useYouTubePlayer() {
   const duration    = usePlayerStore(s => s.duration);
 
   const seekToSeconds = useCallback((seconds: number) => {
+    const song = usePlayerStore.getState().currentSong;
+    // Jamendo: seek on the audio element directly
+    if (song && JamendoService.isJamendo(song.youtubeId) && jamendoAudio) {
+      jamendoAudio.currentTime = seconds;
+      return;
+    }
     usePlayerStore.getState().ytPlayer?.seekTo(seconds, true);
   }, []);
 
+  // ── Wake Lock — keep screen on while music plays ─────────────
+  useEffect(() => {
+    let wakeLock: WakeLockSentinel | null = null;
+
+    const acquire = async () => {
+      if (!('wakeLock' in navigator)) return;
+      try {
+        wakeLock = await (navigator as Navigator & { wakeLock: LockManager }).wakeLock.request('screen');
+      } catch { /* silently ignore — not critical */ }
+    };
+
+    const release = () => {
+      wakeLock?.release().catch(() => {});
+      wakeLock = null;
+    };
+
+    // Re-acquire after tab becomes visible again (OS releases it on hide)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && isPlaying) acquire();
+    };
+
+    if (isPlaying) {
+      acquire();
+      document.addEventListener('visibilitychange', onVisibility);
+    } else {
+      release();
+    }
+
+    return () => {
+      release();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [isPlaying]);
+
   useMediaSession(currentSong, isPlaying, currentTime, duration, {
-    onPlay:     () => usePlayerStore.getState().ytPlayer?.playVideo(),
-    onPause:    () => usePlayerStore.getState().ytPlayer?.pauseVideo(),
+    onPlay:     () => {
+      const song = usePlayerStore.getState().currentSong;
+      if (song && JamendoService.isJamendo(song.youtubeId) && jamendoAudio) {
+        jamendoAudio.play().catch(() => {});
+      } else {
+        usePlayerStore.getState().ytPlayer?.playVideo();
+      }
+    },
+    onPause:    () => {
+      const song = usePlayerStore.getState().currentSong;
+      if (song && JamendoService.isJamendo(song.youtubeId) && jamendoAudio) {
+        jamendoAudio.pause();
+      } else {
+        usePlayerStore.getState().ytPlayer?.pauseVideo();
+      }
+    },
     onNext:     handleNext,
     onPrevious: handlePrevious,
     onSeek:     seekToSeconds,
@@ -244,7 +332,7 @@ export function useYouTubePlayer() {
       }
 
       // Use cached audio if available (works offline), else stream
-      getCachedAudioUrl(rawUrl).then((resolvedUrl: string) => {
+      getCachedAudioUrl(rawUrl).then(resolvedUrl => {
         jamendoAudio!.src = resolvedUrl;
         jamendoAudio!.volume = usePlayerStore.getState().isMuted ? 0 : usePlayerStore.getState().volume / 100;
         jamendoAudio!.play().catch(() => {});
