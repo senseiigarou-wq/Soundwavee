@@ -774,16 +774,33 @@ input[type="range"].volume { width: 80px; }
   bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 8px);
   left: 12px; right: 12px;
   z-index: 30;
-  background: rgba(28,28,28,0.98);
+  background: rgba(22,22,22,0.97);
   border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 10px 14px 10px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.05);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  box-shadow:
+    0 8px 40px rgba(0,0,0,0.7),
+    0 0 0 0.5px rgba(255,255,255,0.06),
+    0 -1px 0 0 rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+/* Glowing progress bar along the very bottom edge */
+.mobile-player::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 3px;
+  width: var(--player-pct, 0%);
+  background: linear-gradient(90deg, var(--pink), #e05587);
+  border-radius: 0 2px 0 0;
+  box-shadow: 0 0 8px rgba(255,107,157,0.6);
+  transition: width 0.5s linear;
+  pointer-events: none;
 }
 .mobile-player-thumb {
   width: 44px; height: 44px;
