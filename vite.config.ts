@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => {
             'android-chrome-512x512.png',
           ],
           manifest: {
+            id: '/soundwave',
             name: 'Soundwave',
             short_name: 'Soundwave',
             description: 'Your personal music streaming player powered by YouTube',
