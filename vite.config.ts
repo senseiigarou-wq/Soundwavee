@@ -44,13 +44,16 @@ export default defineConfig(({ mode }) => {
           },
           workbox: {
             globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+            // Keep SW alive for background audio
+            navigationPreload: false,
             runtimeCaching: [
+              // ── Jamendo audio — CacheFirst so it works offline ──
               {
                 urlPattern: /^https:\/\/mp3l\.jamendo\.com\/.*/i,
                 handler: 'CacheFirst',
                 options: {
                   cacheName: 'jamendo-audio-v1',
-                  expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }, // 30 days
+                  expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 },
                   cacheableResponse: { statuses: [0, 200] },
                   rangeRequests: true,
                 },
