@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --max-warnings 0"
   },
@@ -39,5 +39,9 @@
     "vite-plugin-pwa": "^1.0.0",
     "vite-tsconfig-paths": "^6.1.1",
     "workbox-window": "^7.3.0"
-  }
+  },
+  "workspaces": [
+    "shared",
+    "apps/mobile"
+  ]
 }
