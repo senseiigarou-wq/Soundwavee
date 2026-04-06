@@ -2,30 +2,54 @@
   "expo": {
     "name": "Soundwave",
     "slug": "soundwave",
-    "version": "1.0.0",
+    "version": "1.0.5",
+    "scheme": "soundwave",
     "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#000000",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1DB954"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1DB954"
-      },
-      "package": "com.gemin14.soundwave"
+      "image": "./assets/splash-icon.png",
+      "backgroundColor": "#000000",
+      "resizeMode": "contain"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gemin14.soundwave"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "50edac88-a399-434f-96f7-459d9aeee8e3"
+      "bundleIdentifier": "com.soundwave.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio", "fetch"]
       }
+    },
+    "android": {
+      "package": "com.soundwave.app",
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "resizeMode": "contain"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
